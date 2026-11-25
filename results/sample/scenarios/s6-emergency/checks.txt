@@ -1,0 +1,12 @@
+PASS  [inv -] emergency is ASSIGNED - Instruction[requestId=s6-S6-E1, aircraftId=S6-E1, status=ASSIGNED, runwayId=YYZ-R01, taxiwayId=null, slotStart=1795638084413, slotEnd=1795638144413, reason=null]
+PASS  [inv -] emergency takes the bumped aircraft's runway - YYZ-R01 (P1 had YYZ-R01)
+PASS  [inv -] emergency slot is earlier than any non-bumping option - starts 309 ms after P1's old slot; non-bumping option 119766 ms after
+PASS  [inv -] bumped aircraft told to HOLD, then rebooked to a later slot - HELD (bumped by an emergency; re-allocating), then YYZ-R03 +119 s after its old slot on YYZ-R01
+PASS  [inv -] allocator log: P1's booking BUMPED, rebooked as #2 and confirmed - BUMPED / CONFIRMED
+PASS  [inv -] confirmed (acked) bookings are never bumped
+PASS  [inv 1] no overlapping blocking reservations incl. buffers (final state)
+PASS  [inv 1] no simultaneous runway occupancy (whole history)
+PASS  [inv 2] every assigned runway eligible
+PASS  [inv 3] at most one decision per requestId in the log
+
+emergency decision latency (aircraft -> control -> allocator -> aircraft): 6.66 ms

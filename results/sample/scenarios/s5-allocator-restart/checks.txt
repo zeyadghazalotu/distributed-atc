@@ -1,0 +1,13 @@
+PASS  [inv 5] every assignment seen before the hard kill was already durable - 5 assignments found in the log
+PASS  [inv 6] U1 (acked during the outage): PENDING_ACK -> UNCERTAIN -> CONFIRMED - [PENDING_ACK, UNCERTAIN, CONFIRMED]
+PASS  [inv 6] U2 (never acked): PENDING_ACK -> UNCERTAIN -> RELEASED (only after reconciliation + ack timeout) - [PENDING_ACK, UNCERTAIN, RELEASED]
+PASS  [inv 6] confirmed bookings survive the restart unchanged
+PASS  [inv 6] control service reconciled after detecting the restart
+PASS  [inv 7] request during the outage was HELD, never ASSIGNED - 1 instruction(s) during outage: [HELD]
+PASS  [inv 7] the held request was assigned after the restart - Instruction[requestId=req-S5-H1, aircraftId=S5-H1, status=ASSIGNED, runwayId=YYZ-R05, taxiwayId=null, slotStart=1795638077945, slotEnd=1795638137945, reason=null]
+PASS  [inv 1] no overlapping blocking reservations incl. buffers (final state)
+PASS  [inv 1] no simultaneous runway occupancy (whole history)
+PASS  [inv 2] every assigned runway eligible
+PASS  [inv 3] at most one decision per requestId in the log
+
+outage 3025 ms (kill -> relaunch); relaunch -> held request ASSIGNED in 417 ms (JVM start, log replay, reconnect, retried RESERVE)

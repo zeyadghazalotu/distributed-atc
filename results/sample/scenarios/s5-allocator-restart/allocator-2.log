@@ -1,0 +1,22 @@
+2026-11-25 15:21:17.740 [allocator] INFO  recovered 5 requests from results\s5-allocator-restart\allocator-reservations.jsonl (2 marked UNCERTAIN)
+2026-11-25 15:21:17.742 [allocator] INFO  starting with config results\s5-allocator-restart\config.json, log results\s5-allocator-restart\allocator-reservations.jsonl, time scale 1x (slot 60000 ms, buffer 30000 ms)
+2026-11-25 15:21:17.842 [allocator] INFO  listening: ROUTER tcp://*:6555, PUB tcp://*:6556
+2026-11-25 15:21:17.949 [allocator] INFO  RESERVE req-S5-H1 -> PENDING_ACK YYZ-R05
+2026-11-25 15:21:17.951 [allocator] INFO  CONFIRM req-S5-U1 -> CONFIRMED YYZ-R07
+2026-11-25 15:21:17.951 [allocator] INFO  RESERVE req-S5-H1 -> PENDING_ACK YYZ-R05
+2026-11-25 15:21:17.951 [allocator] INFO  CONFIRM req-S5-U1 -> CONFIRMED YYZ-R07
+2026-11-25 15:21:17.953 [allocator] INFO  RESERVE req-S5-H1 -> PENDING_ACK YYZ-R05
+2026-11-25 15:21:17.953 [allocator] INFO  CONFIRM req-S5-U1 -> CONFIRMED YYZ-R07
+2026-11-25 15:21:17.954 [allocator] INFO  QUERY req-S5-A1 -> CONFIRMED YYZ-R10
+2026-11-25 15:21:17.954 [allocator] INFO  QUERY req-S5-A2 -> CONFIRMED YYZ-R09
+2026-11-25 15:21:17.956 [allocator] INFO  QUERY req-S5-A3 -> CONFIRMED YYZ-R08
+2026-11-25 15:21:17.956 [allocator] INFO  QUERY req-S5-U1 -> CONFIRMED YYZ-R07
+2026-11-25 15:21:17.956 [allocator] INFO  QUERY req-S5-U2 -> UNCERTAIN YYZ-R06
+2026-11-25 15:21:17.957 [allocator] INFO  CONFIRM req-S5-H1 -> CONFIRMED YYZ-R05
+2026-11-25 15:21:18.851 [allocator] INFO  QUERY req-S5-A1 -> CONFIRMED YYZ-R10
+2026-11-25 15:21:18.851 [allocator] INFO  QUERY req-S5-A2 -> CONFIRMED YYZ-R09
+2026-11-25 15:21:18.852 [allocator] INFO  QUERY req-S5-A3 -> CONFIRMED YYZ-R08
+2026-11-25 15:21:18.852 [allocator] INFO  QUERY req-S5-U1 -> CONFIRMED YYZ-R07
+2026-11-25 15:21:18.853 [allocator] INFO  QUERY req-S5-U2 -> UNCERTAIN YYZ-R06
+2026-11-25 15:21:18.853 [allocator] INFO  QUERY req-S5-H1 -> CONFIRMED YYZ-R05
+2026-11-25 15:21:20.048 [allocator] INFO  RELEASE req-S5-U2 -> RELEASED YYZ-R06

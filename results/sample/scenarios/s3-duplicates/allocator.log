@@ -1,0 +1,15 @@
+2026-11-25 15:21:03.024 [allocator] INFO  starting with config results\s3-duplicates\config.json, log results\s3-duplicates\allocator-reservations.jsonl, time scale 1x (slot 60000 ms, buffer 30000 ms)
+2026-11-25 15:21:03.125 [allocator] INFO  listening: ROUTER tcp://*:6555, PUB tcp://*:6556
+2026-11-25 15:21:04.503 [allocator] INFO  RESERVE s3-r1 -> PENDING_ACK YYZ-R06
+2026-11-25 15:21:04.729 [allocator] INFO  RESERVE s3-r2 -> PENDING_ACK YYZ-R10
+2026-11-25 15:21:05.234 [allocator] INFO  RESERVE s3-x1 -> PENDING_ACK YYZ-R03
+2026-11-25 15:21:05.235 [allocator] INFO  RESERVE s3-x1 -> PENDING_ACK YYZ-R03
+2026-11-25 15:21:05.236 [allocator] INFO  RESERVE s3-x1 -> PENDING_ACK YYZ-R03
+2026-11-25 15:21:05.239 [allocator] INFO  RESERVE s3-x1 -> PENDING_ACK YYZ-R03
+2026-11-25 15:21:05.239 [allocator] INFO  RESERVE s3-x1 -> PENDING_ACK YYZ-R03
+2026-11-25 15:21:05.240 [allocator] INFO  RESERVE s3-x1 -> PENDING_ACK YYZ-R03
+2026-11-25 15:21:05.243 [allocator] INFO  RESERVE s3-x1 -> PENDING_ACK YYZ-R03
+2026-11-25 15:21:05.245 [allocator] INFO  RESERVE s3-x1 -> PENDING_ACK YYZ-R03
+2026-11-25 15:21:05.245 [allocator] INFO  RESERVE s3-x1 -> PENDING_ACK YYZ-R03
+2026-11-25 15:21:05.248 [allocator] INFO  RESERVE s3-x1 -> PENDING_ACK YYZ-R03
+2026-11-25 15:21:05.252 [allocator] INFO  CONFIRM s3-r1 -> CONFIRMED YYZ-R06

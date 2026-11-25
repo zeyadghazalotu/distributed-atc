@@ -1,0 +1,5 @@
+airport,aircraft,size,status,runway,reason
+YOW,S2-HEAVY-YOW,HEAVY,REJECTED,,"no runway at YOW is eligible for size class HEAVY"
+YOW,S2-SMALL-YOW,SMALL,ASSIGNED,YOW-R10,""
+YOW,S2-MEDIUM-YOW,MEDIUM,ASSIGNED,YOW-R02,""
+YYZ,S2-HEAVY-YYZ,HEAVY,ASSIGNED,YYZ-R03,""

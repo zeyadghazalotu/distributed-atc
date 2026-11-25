@@ -1,0 +1,41 @@
+# Maven
+target/
+dependency-reduced-pom.xml
+*.class
+
+# Runtime data (allocator write-ahead log etc.)
+data/
+
+# Scenario outputs: only the sample scenario run is committed
+results/*
+!results/sample/
+results/sample/*
+!results/sample/scenarios/
+
+# Kept locally, not published: report material, course PDFs, AI working notes
+docs/
+*.pdf
+*.docx
+CLAUDE.md
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code
+.vscode/
+.history/
+
+# Java tooling
+.classpath
+.project
+.settings/
+.factorypath
+bin/
+
+# OS
+.DS_Store
+Thumbs.db

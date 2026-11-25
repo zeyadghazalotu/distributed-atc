@@ -1,0 +1,9 @@
+2026-11-25 15:20:58.675 [allocator] INFO  starting with config results\s2-incompatible\config.json, log results\s2-incompatible\allocator-reservations.jsonl, time scale 1x (slot 60000 ms, buffer 30000 ms)
+2026-11-25 15:20:58.777 [allocator] INFO  listening: ROUTER tcp://*:6555, PUB tcp://*:6556
+2026-11-25 15:21:02.466 [allocator] INFO  RESERVE s2-S2-HEAVY-YOW -> REJECTED 
+2026-11-25 15:21:02.488 [allocator] INFO  RESERVE s2-direct-heavy -> REJECTED 
+2026-11-25 15:21:02.497 [allocator] INFO  RESERVE s2-S2-SMALL-YOW -> PENDING_ACK YOW-R10
+2026-11-25 15:21:02.501 [allocator] INFO  CONFIRM s2-S2-SMALL-YOW -> CONFIRMED YOW-R10
+2026-11-25 15:21:02.503 [allocator] INFO  RESERVE s2-S2-MEDIUM-YOW -> PENDING_ACK YOW-R02
+2026-11-25 15:21:02.505 [allocator] INFO  CONFIRM s2-S2-MEDIUM-YOW -> CONFIRMED YOW-R02
+2026-11-25 15:21:02.513 [allocator] INFO  RESERVE s2-S2-HEAVY-YYZ -> PENDING_ACK YYZ-R03

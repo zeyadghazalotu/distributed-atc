@@ -1,0 +1,101 @@
+{
+  "allocator" : {
+    "host" : "127.0.0.1",
+    "routerPort" : 6555,
+    "pubPort" : 6556
+  },
+  "timing" : {
+    "slotSeconds" : 60,
+    "bufferSeconds" : 30,
+    "waitThresholdSeconds" : 300,
+    "receiveTimeoutMs" : 2000,
+    "heartbeatMs" : 1000,
+    "timeScale" : 1
+  },
+  "airports" : [ {
+    "id" : "YYZ",
+    "controlRouterPort" : 6560,
+    "positionSubPort" : 6561,
+    "eventPubPort" : 6562,
+    "aircraftCount" : 5,
+    "taxiways" : [ "YYZ-A", "YYZ-B", "YYZ-C", "YYZ-D" ],
+    "runways" : [ {
+      "id" : "YYZ-R01",
+      "lengthM" : 3400
+    }, {
+      "id" : "YYZ-R02",
+      "lengthM" : 3350
+    }, {
+      "id" : "YYZ-R03",
+      "lengthM" : 3200
+    }, {
+      "id" : "YYZ-R04",
+      "lengthM" : 2900
+    }, {
+      "id" : "YYZ-R05",
+      "lengthM" : 2800,
+      "maxSizeClass" : "MEDIUM"
+    }, {
+      "id" : "YYZ-R06",
+      "lengthM" : 2600
+    }, {
+      "id" : "YYZ-R07",
+      "lengthM" : 2200
+    }, {
+      "id" : "YYZ-R08",
+      "lengthM" : 1800
+    }, {
+      "id" : "YYZ-R09",
+      "lengthM" : 1600,
+      "maxSizeClass" : "SMALL"
+    }, {
+      "id" : "YYZ-R10",
+      "lengthM" : 1500,
+      "maxSizeClass" : "SMALL"
+    } ]
+  }, {
+    "id" : "YOW",
+    "controlRouterPort" : 6570,
+    "positionSubPort" : 6571,
+    "eventPubPort" : 6572,
+    "aircraftCount" : 5,
+    "taxiways" : [ "YOW-A", "YOW-B", "YOW-C", "YOW-D" ],
+    "runways" : [ {
+      "id" : "YOW-R01",
+      "lengthM" : 3050,
+      "maxSizeClass" : "MEDIUM"
+    }, {
+      "id" : "YOW-R02",
+      "lengthM" : 2600
+    }, {
+      "id" : "YOW-R03",
+      "lengthM" : 2400
+    }, {
+      "id" : "YOW-R04",
+      "lengthM" : 2300
+    }, {
+      "id" : "YOW-R05",
+      "lengthM" : 2100
+    }, {
+      "id" : "YOW-R06",
+      "lengthM" : 2000,
+      "maxSizeClass" : "SMALL"
+    }, {
+      "id" : "YOW-R07",
+      "lengthM" : 1900,
+      "maxSizeClass" : "SMALL"
+    }, {
+      "id" : "YOW-R08",
+      "lengthM" : 1700,
+      "maxSizeClass" : "SMALL"
+    }, {
+      "id" : "YOW-R09",
+      "lengthM" : 1600,
+      "maxSizeClass" : "SMALL"
+    }, {
+      "id" : "YOW-R10",
+      "lengthM" : 1500,
+      "maxSizeClass" : "SMALL"
+    } ]
+  } ]
+}

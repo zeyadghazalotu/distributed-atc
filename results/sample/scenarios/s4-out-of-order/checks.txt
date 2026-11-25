@@ -1,0 +1,4 @@
+PASS  [inv -] position feed connected
+PASS  [inv 4] shuffled aircraft ends on its newest update (seq 60) - seq=60 x=600.0
+PASS  [inv 4] in-order aircraft ends on seq 60 - seq=60
+PASS  [inv 4] exactly the stale/duplicate updates were dropped - dropped 75, expected 75 of 142 sent

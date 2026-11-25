@@ -1,0 +1,9 @@
+t_ms,event
+2663,allocator + control up
+3350,5 aircraft assigned; A1-A3 acked, U1/U2 not acked
+3859,allocator HARD KILLED
+4370,H1 requests during outage
+4586,U1 acks during outage
+7204,allocator restarted from its log
+7301,H1 ASSIGNED after restart
+9578,U1 reconciled, U2 released

@@ -1,0 +1,13 @@
+PASS  [inv 3] 8 copies of one request -> identical answers - 4 replies, decision Instruction[requestId=s3-r1, aircraftId=S3-AC1, status=ASSIGNED, runwayId=YYZ-R06, taxiwayId=null, slotStart=1795638064496, slotEnd=1795638124496, reason=null]
+PASS  [inv 3] retry after a lost reply returns the decision already made - Instruction[requestId=s3-r2, aircraftId=S3-AC2, status=ASSIGNED, runwayId=YYZ-R10, taxiwayId=YYZ-A, slotStart=1795638064727, slotEnd=1795638124727, reason=null]
+PASS  [inv 3] 10 RESERVEs with one requestId (3 sockets) -> identical replies - Reservation[requestId=s3-x1, state=PENDING_ACK, runwayId=YYZ-R03, slotStart=1795638065233, slotEnd=1795638125233, reason=null]
+PASS  [inv 3] s3-r1: exactly one reservation decision logged - 1 decision(s)
+PASS  [inv 3] s3-r2: exactly one reservation decision logged - 1 decision(s)
+PASS  [inv 3] s3-x1: exactly one reservation decision logged - 1 decision(s)
+PASS  [inv 3] 3 duplicate ACKs -> one CONFIRMED transition - 1 CONFIRMED record(s)
+PASS  [inv 1] no overlapping blocking reservations incl. buffers (final state)
+PASS  [inv 1] no simultaneous runway occupancy (whole history)
+PASS  [inv 2] every assigned runway eligible
+PASS  [inv 3] at most one decision per requestId in the log
+
+allocator call latency: first decision n=1 p50=1.93ms p95=1.93ms p99=1.93ms max=1.93ms; deduplicated replay n=9 p50=0.79ms p95=1.41ms p99=1.41ms max=1.41ms

@@ -1,0 +1,12 @@
+2026-11-25 15:21:21.081 [allocator] INFO  starting with config results\s6-emergency\config.json, log results\s6-emergency\allocator-reservations.jsonl, time scale 1x (slot 60000 ms, buffer 30000 ms)
+2026-11-25 15:21:21.185 [allocator] INFO  listening: ROUTER tcp://*:6555, PUB tcp://*:6556
+2026-11-25 15:21:23.877 [allocator] INFO  RESERVE s6-S6-C1 -> PENDING_ACK YYZ-R03
+2026-11-25 15:21:23.885 [allocator] INFO  CONFIRM s6-S6-C1 -> CONFIRMED YYZ-R03
+2026-11-25 15:21:23.998 [allocator] INFO  RESERVE s6-S6-C2 -> PENDING_ACK YYZ-R02
+2026-11-25 15:21:24.000 [allocator] INFO  CONFIRM s6-S6-C2 -> CONFIRMED YYZ-R02
+2026-11-25 15:21:24.104 [allocator] INFO  RESERVE s6-S6-P1 -> PENDING_ACK YYZ-R01
+2026-11-25 15:21:24.415 [allocator] INFO  emergency s6-S6-E1 bumped s6-S6-P1 (S6-P1) from YYZ-R01
+2026-11-25 15:21:24.416 [allocator] INFO  RESERVE s6-S6-E1 -> PENDING_ACK YYZ-R01
+2026-11-25 15:21:24.418 [allocator] INFO  RESERVE s6-S6-P1#2 -> PENDING_ACK YYZ-R03
+2026-11-25 15:21:24.419 [allocator] INFO  CONFIRM s6-S6-E1 -> CONFIRMED YYZ-R01
+2026-11-25 15:21:24.421 [allocator] INFO  CONFIRM s6-S6-P1#2 -> CONFIRMED YYZ-R03

@@ -1,0 +1,39 @@
+2026-11-25 15:21:12.284 [control-YYZ] INFO  listening: aircraft ROUTER :6560, positions SUB :6561, events PUB :6562; allocator tcp://127.0.0.1:6555 / tcp://127.0.0.1:6556
+2026-11-25 15:21:13.006 [control-YYZ] INFO  ALLOCATOR_REACHABLE heartbeat received
+2026-11-25 15:21:13.644 [control-YYZ] INFO  REQUEST S5-A1 LANDING SMALL id=req-S5-A1
+2026-11-25 15:21:13.663 [control-YYZ] INFO  INSTRUCTION S5-A1 ASSIGNED YYZ-R10
+2026-11-25 15:21:13.666 [control-YYZ] INFO  ACKED S5-A1 acked YYZ-R10 id=req-S5-A1
+2026-11-25 15:21:13.778 [control-YYZ] INFO  REQUEST S5-A2 LANDING SMALL id=req-S5-A2
+2026-11-25 15:21:13.782 [control-YYZ] INFO  INSTRUCTION S5-A2 ASSIGNED YYZ-R09
+2026-11-25 15:21:13.782 [control-YYZ] INFO  ACKED S5-A2 acked YYZ-R09 id=req-S5-A2
+2026-11-25 15:21:13.887 [control-YYZ] INFO  REQUEST S5-A3 LANDING SMALL id=req-S5-A3
+2026-11-25 15:21:13.890 [control-YYZ] INFO  INSTRUCTION S5-A3 ASSIGNED YYZ-R08
+2026-11-25 15:21:13.890 [control-YYZ] INFO  ACKED S5-A3 acked YYZ-R08 id=req-S5-A3
+2026-11-25 15:21:13.995 [control-YYZ] INFO  REQUEST S5-U1 LANDING SMALL id=req-S5-U1
+2026-11-25 15:21:13.997 [control-YYZ] INFO  INSTRUCTION S5-U1 ASSIGNED YYZ-R07
+2026-11-25 15:21:13.998 [control-YYZ] INFO  REQUEST S5-U2 LANDING SMALL id=req-S5-U2
+2026-11-25 15:21:14.001 [control-YYZ] INFO  INSTRUCTION S5-U2 ASSIGNED YYZ-R06
+2026-11-25 15:21:15.022 [control-YYZ] INFO  REQUEST S5-H1 LANDING SMALL id=req-S5-H1
+2026-11-25 15:21:15.238 [control-YYZ] INFO  ACKED S5-U1 acked YYZ-R07 id=req-S5-U1
+2026-11-25 15:21:17.042 [control-YYZ] INFO  ALLOCATOR_UNREACHABLE no reply within 2000 ms
+2026-11-25 15:21:17.042 [control-YYZ] WARN  allocator timeout on RESERVE:req-S5-H1 (attempt 1), retrying
+2026-11-25 15:21:17.042 [control-YYZ] INFO  INSTRUCTION S5-H1 HELD  (allocator did not answer; hold until a decision arrives)
+2026-11-25 15:21:17.287 [control-YYZ] WARN  allocator timeout on CONFIRM:req-S5-U1 (attempt 1), retrying
+2026-11-25 15:21:17.951 [control-YYZ] INFO  ALLOCATOR_REACHABLE reply received
+2026-11-25 15:21:17.951 [control-YYZ] INFO  RECONCILE allocator reachable again: querying 5 assignment(s)
+2026-11-25 15:21:17.951 [control-YYZ] INFO  INSTRUCTION S5-H1 ASSIGNED YYZ-R05
+2026-11-25 15:21:17.953 [control-YYZ] INFO  ACKED S5-H1 acked YYZ-R05 id=req-S5-H1
+2026-11-25 15:21:17.956 [control-YYZ] INFO  RECONCILED S5-A1 id=req-S5-A1 local=ACKED, allocator=CONFIRMED -> consistent
+2026-11-25 15:21:17.957 [control-YYZ] INFO  RECONCILED S5-A2 id=req-S5-A2 local=ACKED, allocator=CONFIRMED -> consistent
+2026-11-25 15:21:17.957 [control-YYZ] INFO  RECONCILED S5-A3 id=req-S5-A3 local=ACKED, allocator=CONFIRMED -> consistent
+2026-11-25 15:21:17.957 [control-YYZ] INFO  RECONCILED S5-U1 id=req-S5-U1 local=ACKED, allocator=CONFIRMED -> consistent
+2026-11-25 15:21:17.957 [control-YYZ] INFO  RECONCILED S5-U2 id=req-S5-U2 local=ASSIGNED, allocator=UNCERTAIN -> awaiting ack
+2026-11-25 15:21:18.850 [control-YYZ] INFO  RECONCILE allocator restarted: querying 6 assignment(s)
+2026-11-25 15:21:18.851 [control-YYZ] INFO  RECONCILED S5-A1 id=req-S5-A1 local=ACKED, allocator=CONFIRMED -> consistent
+2026-11-25 15:21:18.852 [control-YYZ] INFO  RECONCILED S5-A2 id=req-S5-A2 local=ACKED, allocator=CONFIRMED -> consistent
+2026-11-25 15:21:18.853 [control-YYZ] INFO  RECONCILED S5-A3 id=req-S5-A3 local=ACKED, allocator=CONFIRMED -> consistent
+2026-11-25 15:21:18.853 [control-YYZ] INFO  RECONCILED S5-U1 id=req-S5-U1 local=ACKED, allocator=CONFIRMED -> consistent
+2026-11-25 15:21:18.853 [control-YYZ] INFO  RECONCILED S5-U2 id=req-S5-U2 local=ASSIGNED, allocator=UNCERTAIN -> awaiting ack
+2026-11-25 15:21:18.854 [control-YYZ] INFO  RECONCILED S5-H1 id=req-S5-H1 local=ACKED, allocator=CONFIRMED -> consistent
+2026-11-25 15:21:20.045 [control-YYZ] INFO  INSTRUCTION S5-U2 WAIT  (no ack received in time; booking released, request again)
+2026-11-25 15:21:20.045 [control-YYZ] INFO  ACK_TIMEOUT S5-U2 never acked YYZ-R06 id=req-S5-U2

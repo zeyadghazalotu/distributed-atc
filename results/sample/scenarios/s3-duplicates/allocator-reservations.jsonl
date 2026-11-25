@@ -1,0 +1,4 @@
+{"requestId":"s3-r1","aircraftId":"S3-AC1","airportId":"YYZ","operation":"LANDING","sizeClass":"MEDIUM","emergency":false,"state":"PENDING_ACK","runwayId":"YYZ-R06","slotStart":1795638064496,"slotEnd":1795638124496,"updatedAt":1795638064496}
+{"requestId":"s3-r2","aircraftId":"S3-AC2","airportId":"YYZ","operation":"TAKEOFF","sizeClass":"SMALL","emergency":false,"state":"PENDING_ACK","runwayId":"YYZ-R10","slotStart":1795638064727,"slotEnd":1795638124727,"updatedAt":1795638064727}
+{"requestId":"s3-x1","aircraftId":"S3-DIRECT","airportId":"YYZ","operation":"LANDING","sizeClass":"HEAVY","emergency":false,"state":"PENDING_ACK","runwayId":"YYZ-R03","slotStart":1795638065233,"slotEnd":1795638125233,"updatedAt":1795638065233}
+{"requestId":"s3-r1","aircraftId":"S3-AC1","airportId":"YYZ","operation":"LANDING","sizeClass":"MEDIUM","emergency":false,"state":"CONFIRMED","runwayId":"YYZ-R06","slotStart":1795638064496,"slotEnd":1795638124496,"updatedAt":1795638065251}

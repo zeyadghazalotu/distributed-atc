@@ -1,0 +1,31 @@
+PASS  [inv liveness] fsync @100 req/s: every request answered - 500/500
+PASS  [inv liveness] fsync @250 req/s: every request answered - 1250/1250
+PASS  [inv liveness] fsync @500 req/s: every request answered - 2500/2500
+PASS  [inv liveness] fsync @1000 req/s: every request answered - 5000/5000
+PASS  [inv liveness] fsync @2000 req/s: every request answered - 10000/10000
+PASS  [inv 1] no overlapping blocking reservations incl. buffers (final state)
+PASS  [inv 1] no simultaneous runway occupancy (whole history)
+PASS  [inv 2] every assigned runway eligible
+PASS  [inv 3] at most one decision per requestId in the log
+PASS  [inv liveness] no-fsync @100 req/s: every request answered - 500/500
+PASS  [inv liveness] no-fsync @250 req/s: every request answered - 1250/1250
+PASS  [inv liveness] no-fsync @500 req/s: every request answered - 2500/2500
+PASS  [inv liveness] no-fsync @1000 req/s: every request answered - 5000/5000
+PASS  [inv liveness] no-fsync @2000 req/s: every request answered - 10000/10000
+PASS  [inv 1] no overlapping blocking reservations incl. buffers (final state)
+PASS  [inv 1] no simultaneous runway occupancy (whole history)
+PASS  [inv 2] every assigned runway eligible
+PASS  [inv 3] at most one decision per requestId in the log
+
+fsync      100 req/s target: 100 req/s achieved, n=500 p50=0.98ms p95=1.64ms p99=2.03ms max=13.71ms, cpu avg 10% max 20% of a core, heap max 20 MB
+fsync      250 req/s target: 250 req/s achieved, n=1250 p50=1.31ms p95=2.37ms p99=3.21ms max=13.39ms, cpu avg 14% max 25% of a core, heap max 25 MB
+fsync      500 req/s target: 500 req/s achieved, n=2500 p50=1.93ms p95=3.43ms p99=4.02ms max=13.66ms, cpu avg 35% max 62% of a core, heap max 96 MB
+fsync     1000 req/s target: 999 req/s achieved, n=5000 p50=2.92ms p95=9.33ms p99=12.17ms max=15.17ms, cpu avg 71% max 128% of a core, heap max 165 MB
+fsync     2000 req/s target: 1175 req/s achieved, n=10000 p50=531.32ms p95=3134.57ms p99=3456.79ms max=3512.10ms, cpu avg 93% max 155% of a core, heap max 246 MB
+invariant checks on the highest-rate fsync log (alloc-fsync-2000.jsonl):
+no-fsync   100 req/s target: 100 req/s achieved, n=500 p50=0.57ms p95=1.12ms p99=1.95ms max=11.13ms, cpu avg 17% max 31% of a core, heap max 20 MB
+no-fsync   250 req/s target: 250 req/s achieved, n=1250 p50=0.72ms p95=1.36ms p99=2.26ms max=11.25ms, cpu avg 20% max 28% of a core, heap max 25 MB
+no-fsync   500 req/s target: 499 req/s achieved, n=2500 p50=1.09ms p95=2.21ms p99=3.03ms max=11.31ms, cpu avg 39% max 67% of a core, heap max 96 MB
+no-fsync  1000 req/s target: 999 req/s achieved, n=5000 p50=1.89ms p95=4.35ms p99=5.71ms max=11.36ms, cpu avg 49% max 76% of a core, heap max 163 MB
+no-fsync  2000 req/s target: 1605 req/s achieved, n=10000 p50=15.11ms p95=1032.69ms p99=1202.09ms max=1232.12ms, cpu avg 115% max 168% of a core, heap max 302 MB
+invariant checks on the highest-rate no-fsync log (alloc-no-fsync-2000.jsonl):

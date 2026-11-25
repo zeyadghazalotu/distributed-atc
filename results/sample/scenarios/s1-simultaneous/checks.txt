@@ -1,0 +1,8 @@
+PASS  [inv liveness] every simultaneous request got a decision - 40/40 decided
+PASS  [inv 1] no overlapping blocking reservations incl. buffers (final state)
+PASS  [inv 1] no simultaneous runway occupancy (whole history)
+PASS  [inv 2] every assigned runway eligible
+PASS  [inv 3] at most one decision per requestId in the log
+
+outcomes: {ASSIGNED=30, WAIT=10}; runways used: {YYZ-R01=3, YYZ-R02=3, YYZ-R03=3, YYZ-R04=3, YYZ-R05=3, YYZ-R06=3, YYZ-R07=3, YYZ-R08=3, YYZ-R09=3, YYZ-R10=3}
+decision latency (aircraft -> control -> allocator -> aircraft): n=40 p50=40.11ms p95=55.50ms p99=57.18ms max=57.18ms

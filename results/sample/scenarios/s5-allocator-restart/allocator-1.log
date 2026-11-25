@@ -1,0 +1,10 @@
+2026-11-25 15:21:10.850 [allocator] INFO  starting with config results\s5-allocator-restart\config.json, log results\s5-allocator-restart\allocator-reservations.jsonl, time scale 1x (slot 60000 ms, buffer 30000 ms)
+2026-11-25 15:21:10.953 [allocator] INFO  listening: ROUTER tcp://*:6555, PUB tcp://*:6556
+2026-11-25 15:21:13.659 [allocator] INFO  RESERVE req-S5-A1 -> PENDING_ACK YYZ-R10
+2026-11-25 15:21:13.666 [allocator] INFO  CONFIRM req-S5-A1 -> CONFIRMED YYZ-R10
+2026-11-25 15:21:13.781 [allocator] INFO  RESERVE req-S5-A2 -> PENDING_ACK YYZ-R09
+2026-11-25 15:21:13.783 [allocator] INFO  CONFIRM req-S5-A2 -> CONFIRMED YYZ-R09
+2026-11-25 15:21:13.889 [allocator] INFO  RESERVE req-S5-A3 -> PENDING_ACK YYZ-R08
+2026-11-25 15:21:13.891 [allocator] INFO  CONFIRM req-S5-A3 -> CONFIRMED YYZ-R08
+2026-11-25 15:21:13.996 [allocator] INFO  RESERVE req-S5-U1 -> PENDING_ACK YYZ-R07
+2026-11-25 15:21:14.000 [allocator] INFO  RESERVE req-S5-U2 -> PENDING_ACK YYZ-R06

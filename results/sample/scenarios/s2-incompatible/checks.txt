@@ -1,0 +1,12 @@
+PASS  [inv 2] HEAVY at YOW is REJECTED via the control service - Instruction[requestId=s2-S2-HEAVY-YOW, aircraftId=S2-HEAVY-YOW, status=REJECTED, runwayId=null, taxiwayId=null, slotStart=null, slotEnd=null, reason=no runway at YOW is eligible for size class HEAVY]
+PASS  [inv 2] rejection carries a reason - no runway at YOW is eligible for size class HEAVY
+PASS  [inv 3] retried rejected request gets the identical answer - Instruction[requestId=s2-S2-HEAVY-YOW, aircraftId=S2-HEAVY-YOW, status=REJECTED, runwayId=null, taxiwayId=null, slotStart=null, slotEnd=null, reason=no runway at YOW is eligible for size class HEAVY]
+PASS  [inv 2] HEAVY at YOW is REJECTED directly by the allocator - Reservation[requestId=s2-direct-heavy, state=REJECTED, runwayId=null, slotStart=null, slotEnd=null, reason=no runway at YOW is eligible for size class HEAVY]
+PASS  [inv 2] SMALL at YOW is ASSIGNED - Instruction[requestId=s2-S2-SMALL-YOW, aircraftId=S2-SMALL-YOW, status=ASSIGNED, runwayId=YOW-R10, taxiwayId=null, slotStart=1795638062493, slotEnd=1795638122493, reason=null]
+PASS  [inv 2] MEDIUM at YOW is ASSIGNED - Instruction[requestId=s2-S2-MEDIUM-YOW, aircraftId=S2-MEDIUM-YOW, status=ASSIGNED, runwayId=YOW-R02, taxiwayId=null, slotStart=1795638062503, slotEnd=1795638122503, reason=null]
+PASS  [inv 2] the same HEAVY aircraft type IS assigned at YYZ (long runways) - Instruction[requestId=s2-S2-HEAVY-YYZ, aircraftId=S2-HEAVY-YYZ, status=ASSIGNED, runwayId=YYZ-R03, taxiwayId=null, slotStart=1795638062513, slotEnd=1795638122513, reason=null]
+PASS  [inv 3] the rejection was decided (logged) exactly once - 1 record(s)
+PASS  [inv 1] no overlapping blocking reservations incl. buffers (final state)
+PASS  [inv 1] no simultaneous runway occupancy (whole history)
+PASS  [inv 2] every assigned runway eligible
+PASS  [inv 3] at most one decision per requestId in the log
