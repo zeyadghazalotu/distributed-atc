@@ -1,0 +1,1025 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distributed ATC · Live dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #100D1C; --bg2: #141026; --panel: #1A1528; --panel2: #221C36; --line: #2A2340; --line2: #352C4F;
+    --text: #F3EFFA; --muted: #A79FC2; --soft: #CBC4DE;
+    --accent: #B69CFF; --run: #5EE3B5; --taxi: #FFB86B; --emerg: #FF7A93; --air: #8EA7FF; --park: #8C83A8;
+    --series-1: #8A74F0; --series-2: #D2742A;
+    --sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --display: "Space Grotesk", Inter, system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); }
+  .page { position: relative; overflow: hidden; min-height: 100vh; }
+  button { font: inherit; }
+
+  /* A380 silhouette behind the header */
+  .a380 { position: absolute; top: 24px; right: -80px; width: 1180px; height: 360px; pointer-events: none; opacity: 0.14;
+          -webkit-mask-image: radial-gradient(ellipse 62% 70% at 62% 48%, #000 30%, transparent 78%);
+          mask-image: radial-gradient(ellipse 62% 70% at 62% 48%, #000 30%, transparent 78%); }
+
+  header { position: relative; border-bottom: 1px solid var(--line); background: rgba(20,16,38,0.55); backdrop-filter: blur(4px); }
+  .bar { max-width: 1440px; margin: 0 auto; padding: 18px 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 32px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo { width: 40px; height: 40px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line2); display: flex; align-items: center; justify-content: center; }
+  .brand h1 { margin: 0; font: 600 18px/1.2 var(--display); letter-spacing: -0.01em; }
+  .brand .sub { font-size: 12px; color: var(--muted); }
+  nav.tabs { display: flex; gap: 4px; padding: 4px; background: #1E1830; border: 1px solid #2E2645; border-radius: 12px; }
+  nav.tabs a { padding: 7px 16px; border-radius: 8px; color: var(--muted); text-decoration: none; font-weight: 500; }
+  nav.tabs a:hover { color: var(--text); }
+  nav.tabs a.active { background: #3A2F5C; color: var(--text); }
+  .services { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 auto; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #1C1730; border: 1px solid #2E2645; font-size: 12.5px; white-space: nowrap; }
+  .pill .age { font: 11.5px var(--mono); color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--park); flex: none; display: inline-block; }
+  .dot.up { background: var(--run); box-shadow: 0 0 0 3px rgba(94,227,181,0.15); }
+  .dot.down { background: var(--emerg); box-shadow: 0 0 0 3px rgba(255,122,147,0.18); }
+  .clock { text-align: right; }
+  .clock b { display: block; font: 500 20px var(--mono); letter-spacing: 0.02em; }
+  .clock span { font-size: 11.5px; color: var(--muted); }
+
+  .banner { display: none; position: relative; max-width: 1376px; margin: 16px auto 0; padding: 12px 16px; border-radius: 12px;
+            border: 1px solid rgba(255,122,147,0.6); color: #FF8FA6; background: rgba(242,85,122,0.1); }
+  .banner.show { display: block; }
+  .banner.offline { border-color: rgba(255,184,107,0.6); color: var(--taxi); background: rgba(255,184,107,0.08); }
+
+  main { position: relative; max-width: 1440px; margin: 0 auto; padding: 24px 32px 48px; display: none; flex-direction: column; gap: 24px; }
+  main.active { display: flex; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; min-width: 0; }
+  .card-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; padding: 18px 24px; border-bottom: 1px solid var(--line); }
+  .card-head h2 { margin: 0; font: 600 18px var(--display); }
+  .meta { font-size: 12.5px; color: var(--muted); }
+  .section { padding: 18px 24px; border-bottom: 1px solid var(--line); }
+  .section:last-child { border-bottom: 0; }
+  h3.label { margin: 0 0 10px; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
+  h3.label .hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .empty { color: var(--muted); font-style: italic; }
+  code { font-family: var(--mono); }
+  .tag { display: inline-block; font: 600 11px var(--mono); padding: 2px 8px; border-radius: 6px; border: 1px solid; white-space: nowrap; }
+  .t-ok { color: var(--run); background: rgba(94,227,181,0.1); border-color: rgba(94,227,181,0.3); }
+  .t-info { color: var(--accent); background: rgba(182,156,255,0.1); border-color: rgba(182,156,255,0.3); }
+  .t-warn { color: var(--taxi); background: rgba(255,184,107,0.1); border-color: rgba(255,184,107,0.35); }
+  .t-bad { color: #FF8FA6; background: rgba(242,85,122,0.12); border-color: rgba(242,85,122,0.35); }
+  .t-idle { color: #B3ABCB; background: var(--panel2); border-color: var(--line2); }
+  .emerg-tag { font: 600 10.5px var(--sans); letter-spacing: 0.04em; color: #fff; background: #C8325A; padding: 2px 7px; border-radius: 6px; margin-left: 6px; }
+
+  /* ---------- 3D airfield ---------- */
+  .hero { display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch; }
+  .scene { position: relative; flex: 999 1 640px; min-width: 0; height: 640px; border-radius: 28px; overflow: hidden; border: 1px solid var(--line);
+           background: radial-gradient(ellipse 75% 65% at 50% 62%, #221A42 0%, #150F2A 55%, #0E0A1A 100%);
+           cursor: grab; user-select: none; touch-action: pan-y; }
+  .scene.dragging { cursor: grabbing; }
+  .viewport { position: absolute; inset: 0; perspective: 1500px; perspective-origin: 50% 30%; display: flex; align-items: center; justify-content: center; }
+  .stage { position: relative; flex: none; width: 960px; height: 560px; transform-style: preserve-3d; transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  .stage.quick { transition: transform 0.2s ease-out; }
+  .stage.instant { transition: none; }
+  .p3 { position: absolute; left: 0; top: 0; transform-style: preserve-3d; }
+  .stand { position: absolute; transform-origin: 50% 100%; }
+  .plate { position: absolute; inset: 0; border-radius: 26px; background-color: #19132F;
+           background-image: linear-gradient(rgba(182,156,255,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(182,156,255,0.07) 1px, transparent 1px);
+           background-size: 40px 40px; border: 1px solid #3A2F5C; box-shadow: 0 0 80px rgba(182,156,255,0.12); }
+  .plate-edge { position: absolute; left: 26px; right: 26px; top: 100%; height: 22px; background: #0E0A1A; border-bottom: 1px solid var(--line); transform-origin: top center; transform: rotateX(-90deg); }
+  .taxi { position: absolute; border-radius: 5px; background: #2B2443; box-shadow: inset 0 0 0 1px rgba(94,227,181,0.12); }
+
+  .rw { position: absolute; height: 18px; border-radius: 3px; background: #15102A; border: 1px solid var(--line2); transform-origin: 0 50%; transition: box-shadow 0.4s, border-color 0.4s; }
+  .rw .keys { position: absolute; left: 5px; top: 3px; bottom: 3px; width: 9px; background: repeating-linear-gradient(to bottom, #E9E4F5 0 1.5px, transparent 1.5px 3.5px); opacity: 0.7; }
+  .rw .tdz { position: absolute; left: 24px; width: 26px; height: 2px; background: rgba(233,228,245,0.45); }
+  .rw .cl { position: absolute; left: 18px; right: 14px; top: 50%; height: 3px; margin-top: -1.5px; background: radial-gradient(circle, #fff 0 1px, transparent 1.5px) 0 50% / 9px 3px repeat-x; filter: drop-shadow(0 0 2px #CFE4FF); }
+  .rw .edge { position: absolute; left: 0; right: 0; height: 3px; background: radial-gradient(circle, #F2DFA6 0 0.9px, transparent 1.4px) 0 50% / 12px 3px repeat-x; filter: drop-shadow(0 0 1.5px rgba(255,216,115,0.6)); opacity: 0.55; }
+  .rw .thr { position: absolute; left: -3px; top: -3px; bottom: -3px; width: 3px; background: radial-gradient(circle, #5CFF9D 0 1.1px, transparent 1.6px) 50% 0 / 3px 4px repeat-y; filter: drop-shadow(0 0 3px #5CFF9D); }
+  .rw .end { position: absolute; right: -3px; top: -3px; bottom: -3px; width: 3px; background: radial-gradient(circle, #FF4D5E 0 1.1px, transparent 1.6px) 50% 0 / 3px 4px repeat-y; filter: drop-shadow(0 0 3px #FF4D5E); }
+  .rw .als { position: absolute; left: -62px; top: 50%; width: 56px; height: 3px; margin-top: -1.5px; background: radial-gradient(circle, #fff 0 1px, transparent 1.5px) 0 50% / 6px 3px repeat-x; opacity: 0.8; }
+  .rw .bar-x { position: absolute; left: -34px; top: -4px; width: 3px; height: 26px; background: radial-gradient(circle, #fff 0 1px, transparent 1.5px) 50% 0 / 3px 4px repeat-y; opacity: 0.8; }
+  .rw .rabbit { display: none; position: absolute; left: -62px; top: 50%; width: 5px; height: 5px; margin-top: -2.5px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px 3px rgba(255,255,255,0.9); animation: atcRabbit 0.55s linear infinite; }
+  .rw.lit .rabbit { display: block; }
+  .rw .des { position: absolute; top: 50%; font: 600 13px var(--display); color: var(--text); white-space: nowrap; }
+  .rw .st { position: absolute; left: 50%; top: 50%; font: 600 10px var(--mono); letter-spacing: 0.04em; white-space: nowrap; }
+
+  .ac { position: absolute; left: 0; top: 0; transform-style: preserve-3d; transition: transform 1s linear; color: var(--c); }
+  .ac .shadow { position: absolute; left: -14px; top: -6px; width: 28px; height: 12px; border-radius: 50%; background: #000; filter: blur(4px); opacity: 0.55; transition: opacity 1s; }
+  .ac .stalk { position: absolute; left: -1px; top: 0; width: 2px; height: 0; background: var(--c); opacity: 0.5; transform-origin: top center; transform: rotateX(90deg); transition: height 1s linear; }
+  .ac .path { position: absolute; left: 0; top: -1px; height: 0; border-top: 2px dashed var(--c); opacity: 0.55; transform-origin: 0 50%; }
+  .ac .lift { position: absolute; left: 0; top: 0; transform-style: preserve-3d; transition: transform 1s linear; }
+  .ac .rot { position: absolute; left: 0; top: 0; transform-style: preserve-3d; transition: transform 0.8s linear; }
+  .ac .model { position: absolute; left: 0; top: 0; transform-style: preserve-3d; transform: scale(1.3); }
+  .ac .plan { position: absolute; left: -15px; top: -15px; filter: drop-shadow(0 0 6px var(--c)); }
+  .ac .side { position: absolute; left: -15px; top: -12px; transform-origin: 50% 100%; transform: rotateX(-90deg); }
+  .ac .pulse { display: none; position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--c); animation: atcPulse 1.6s ease-out infinite; }
+  .ac.sel .pulse { display: block; }
+  .ac .tagbtn { position: absolute; left: 0; top: 0; transform-origin: 0 0; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--c);
+                background: rgba(16,13,28,0.85); color: var(--text); font: 600 11px var(--mono); white-space: nowrap; cursor: pointer; }
+  .ac.sel .tagbtn { background: var(--c); color: #140F24; }
+  .ac .lt { display: none; position: absolute; border-radius: 50%; }
+  .ac[data-l~="nav"] .lt-nav, .ac[data-l~="strobe"] .lt-strobe, .ac[data-l~="beacon"] .lt-beacon,
+  .ac[data-l~="land"] .lt-land, .ac[data-l~="taxi"] .lt-taxi, .ac[data-l~="land"] .lt-front, .ac[data-l~="taxi"] .lt-front { display: block; }
+  .lt-land { left: 13px; top: -9px; width: 50px; height: 18px; border-radius: 0 !important; background: linear-gradient(to right, rgba(255,250,232,0.85), rgba(255,250,232,0)); clip-path: polygon(0 42%, 100% 0, 100% 100%, 0 58%); }
+  .lt-taxi { left: 13px; top: -5px; width: 22px; height: 10px; border-radius: 0 !important; background: linear-gradient(to right, rgba(255,232,180,0.7), rgba(255,232,180,0)); clip-path: polygon(0 40%, 100% 0, 100% 100%, 0 60%); }
+  .lt-front { left: 12px; top: -2px; width: 4px; height: 4px; background: #FFFBEA; box-shadow: 0 0 6px 2px rgba(255,248,220,0.95); }
+  .lt-red { left: -4.6px; top: -12.7px; width: 3px; height: 3px; background: #FF3B4E; box-shadow: 0 0 5px 1px #FF3B4E; }
+  .lt-green { left: -4.6px; top: 9.7px; width: 3px; height: 3px; background: #3DFF8A; box-shadow: 0 0 5px 1px #3DFF8A; }
+  .lt-tail { left: -13.6px; top: -1.5px; width: 3px; height: 3px; background: #fff; box-shadow: 0 0 4px 1px #fff; }
+  .lt-strobe { width: 4px; height: 4px; background: #fff; box-shadow: 0 0 9px 3px #fff; animation: atcStrobe 1.3s linear infinite; }
+  .lt-beacon { left: -1.5px; top: -1.5px; width: 3px; height: 3px; background: #FF2D45; box-shadow: 0 0 7px 2px #FF2D45; transform: translateZ(7px); animation: atcBeacon 1.1s ease-in-out infinite; }
+
+  .hud { position: absolute; left: 24px; right: 24px; display: flex; flex-wrap: wrap; gap: 12px 24px; pointer-events: none; }
+  .hud.top { top: 20px; align-items: flex-start; }
+  .hud.bottom { bottom: 20px; align-items: flex-end; }
+  .eyebrow { font: 11px var(--mono); letter-spacing: 0.14em; color: var(--accent); }
+  .hud-title { font: 600 28px var(--display); letter-spacing: -0.02em; }
+  .hud-hint { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .controls { margin-left: auto; display: flex; flex-wrap: wrap; gap: 10px; pointer-events: auto; }
+  .seg { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: rgba(20,16,38,0.75); border: 1px solid #2E2645; }
+  .seg button { padding: 7px 13px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 12.5px; font-weight: 500; cursor: pointer; }
+  .seg button:hover { color: var(--text); background: #2E2645; }
+  .seg button.on { background: #3A2F5C; color: var(--text); }
+  .seg button.mono { font: 600 12.5px var(--mono); }
+  .seg button.icon { width: 34px; padding: 0; display: flex; align-items: center; justify-content: center; color: var(--soft); }
+  .stats { display: flex; flex-wrap: wrap; }
+  .stat { padding-right: 22px; margin-right: 22px; border-right: 1px solid var(--line2); }
+  .stat b { display: block; font: 600 30px/1.1 var(--display); letter-spacing: -0.02em; }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .legend { margin-left: auto; display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--soft); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .waiting { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; color: var(--muted); padding: 24px; }
+  .scene.no-data .waiting { display: flex; }
+
+  .strips { flex: 1 1 320px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .strips-head { display: flex; align-items: baseline; gap: 10px; padding: 4px 2px 6px; }
+  .strips-head h2 { margin: 0; font: 600 18px var(--display); }
+  .strip { display: block; width: 100%; text-align: left; padding: 0; border-radius: 14px; border: 1px solid var(--line); background: rgba(26,21,40,0.8); color: var(--text); cursor: pointer; overflow: hidden; }
+  .strip:hover { border-color: #4E4470; }
+  .strip.sel { border-color: var(--c); background: rgba(182,156,255,0.08); }
+  .strip .cells { display: grid; grid-template-columns: 1.25fr 1fr 0.9fr; }
+  .strip .cells > div { padding: 11px 13px; border-right: 1px dashed var(--line2); min-width: 0; }
+  .strip .cells > div:last-child { border-right: 0; }
+  .strip .big { font: 600 14px var(--mono); display: flex; align-items: center; gap: 8px; }
+  .strip .mid { font: 12px var(--mono); }
+  .strip .small { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .strip .more { display: none; padding: 10px 14px 12px; border-top: 1px dashed var(--line2); background: rgba(182,156,255,0.06); font-size: 12px; color: var(--soft); }
+  .strip.sel .more { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+
+  /* ---------- airport panels ---------- */
+  .airports { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 600px), 1fr)); gap: 24px; }
+  .ap-code { margin: 0; font: 700 28px var(--display); letter-spacing: 0.02em; }
+  .reach { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 3px 10px; border-radius: 999px; border: 1px solid; }
+  .reach.ok { color: var(--run); background: rgba(94,227,181,0.1); border-color: rgba(94,227,181,0.3); }
+  .reach.bad { color: #FF8FA6; background: rgba(242,85,122,0.12); border-color: rgba(242,85,122,0.35); }
+  .airspace { position: relative; height: 150px; margin: 0 8px 24px 44px; }
+  .airspace .gl { position: absolute; left: 0; right: 0; border-top: 1px dashed #352C4F; }
+  .airspace .gt { position: absolute; left: -44px; transform: translateY(50%); font: 11px var(--mono); color: var(--muted); }
+  .airspace .ground { position: absolute; left: 0; right: 0; bottom: 0; border-top: 1px solid #3D3459; }
+  .airspace .rwy { position: absolute; left: 51.1%; width: 5.3%; bottom: -3px; height: 6px; border-radius: 3px; background: #6E6390; }
+  .airspace .ad { position: absolute; transform: translate(-50%, 50%); display: flex; align-items: center; gap: 6px; transition: left 1s linear, bottom 1s linear; }
+  .airspace .ad i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--panel); }
+  .airspace .ad b { font: 600 11.5px var(--mono); }
+  .airspace .axis { position: absolute; left: 0; right: 0; top: 100%; margin-top: 8px; display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--muted); }
+  .tl-row { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 12px; align-items: center; height: 24px; }
+  .tl-name { font: 12px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tl-name span { color: var(--muted); }
+  .tl-track { position: relative; height: 18px; border-radius: 6px; background: #1F1A33; }
+  .tl-buf { position: absolute; top: 5px; bottom: 5px; border-radius: 4px; background: #3A3156; }
+  .tl-bar { position: absolute; top: 0; bottom: 0; border-radius: 6px; font: 600 10.5px/18px var(--mono); padding: 0 6px; overflow: hidden; white-space: nowrap; }
+  .tl-now { position: absolute; top: -3px; bottom: -3px; width: 2px; border-radius: 1px; background: var(--accent); }
+  .tl-axis { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 12px; margin-top: 8px; font: 11px var(--mono); color: var(--muted); }
+  .tl-axis div:last-child { display: flex; justify-content: space-between; }
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; color: var(--muted); font-weight: 500; font-size: 11.5px; padding: 0 8px 8px; white-space: nowrap; }
+  td { padding: 8px; font-family: var(--mono); white-space: nowrap; border-top: 1px solid rgba(42,35,64,0.6); }
+  tr.emerg-row td { background: rgba(242,85,122,0.08); }
+  .twys { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+  .twy { padding: 10px 12px; border-radius: 12px; background: #1F1A33; border: 1px solid #2E2645; }
+  .twy b { display: block; font: 600 12.5px var(--mono); }
+  .twy span { font-size: 12px; color: var(--muted); }
+  .twy.busy { background: rgba(255,184,107,0.08); border-color: rgba(255,184,107,0.35); }
+  .twy.busy span { color: var(--taxi); }
+  .queue { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .events { max-height: 380px; overflow: auto; padding: 6px 12px 12px; }
+  .ev { display: grid; grid-template-columns: 84px 120px 190px minmax(240px, 1fr); gap: 12px; align-items: center; padding: 8px 12px; border-radius: 10px; font-size: 13px; }
+  .ev .t { font-family: var(--mono); color: var(--muted); }
+  .ev .s { font-family: var(--mono); }
+  .ev .d { color: #DAD4E8; }
+  footer { position: relative; max-width: 1440px; margin: 0 auto; padding: 0 32px 28px; font-size: 12.5px; color: var(--muted); }
+
+  /* ---------- evaluation ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .tile { background: rgba(26,21,40,0.72); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; }
+  .tile .label { font-size: 12.5px; color: var(--muted); }
+  .tile .value { font: 600 40px/1.15 var(--display); letter-spacing: -0.03em; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .tile .note { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
+  .chart { padding: 20px 24px; position: relative; }
+  .chart h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .chart .desc { color: var(--muted); font-size: 12.5px; margin: 2px 0 8px; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart .grid line { stroke: var(--line); }
+  .chart .axis text { fill: var(--muted); font: 11px var(--mono); }
+  .chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--soft); margin-bottom: 6px; }
+  .chart-legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+  .tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 10px; font-size: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.4); display: none; white-space: nowrap; z-index: 2; }
+  .tip b { font-family: var(--mono); }
+  .num-r { text-align: right; font-variant-numeric: tabular-nums; }
+  .scen { border-bottom: 1px solid #262038; }
+  .scen:last-child { border-bottom: 0; }
+  .scen summary { cursor: pointer; padding: 14px 24px; display: grid; grid-template-columns: 52px 1fr auto; gap: 14px; align-items: center; list-style: none; }
+  .scen summary::-webkit-details-marker { display: none; }
+  .scen summary:hover { background: rgba(182,156,255,0.04); }
+  .scen .num { width: 40px; height: 40px; border-radius: 12px; background: #1F1A33; border: 1px solid var(--line2); display: flex; align-items: center; justify-content: center; font: 600 13px var(--mono); color: var(--soft); }
+  .scen .what { display: block; color: var(--muted); font-size: 12.5px; }
+  .scen .body { padding: 0 24px 14px 90px; font-size: 12.5px; }
+  .scen .body ul { margin: 0 0 8px; padding: 0; list-style: none; }
+  .scen .body li { padding: 3px 0; }
+  .scen .body .inv { font: 11px var(--mono); color: var(--muted); margin: 0 6px; }
+  .scen .body .det { color: var(--muted); }
+  .scen .notes { margin: 0; font: 11.5px var(--mono); color: var(--soft); white-space: pre-wrap; background: var(--bg2); border: 1px solid #262038; border-radius: 8px; padding: 8px 10px; }
+
+  @keyframes atcRabbit { 0% { transform: translateX(0); opacity: 1; } 85% { transform: translateX(56px); opacity: 1; } 100% { transform: translateX(56px); opacity: 0; } }
+  @keyframes atcStrobe { 0%, 7%, 15%, 100% { opacity: 0; } 3%, 11% { opacity: 1; } }
+  @keyframes atcBeacon { 0%, 100% { opacity: 0.12; } 45%, 55% { opacity: 1; } }
+  @keyframes atcSweep { to { transform: rotate(360deg); } }
+  @keyframes atcPulse { 0% { transform: scale(0.7); opacity: 0.9; } 100% { transform: scale(1.6); opacity: 0; } }
+  @keyframes atcBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+  .sweep { animation: atcSweep 4s linear infinite; }
+  .blink { animation: atcBlink 1.2s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .sweep, .blink, .rw .rabbit, .lt-strobe, .lt-beacon, .ac .pulse { animation: none; }
+    .ac, .ac .lift, .ac .rot, .ac .stalk, .stage { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+<div class="a380" aria-hidden="true">
+  <svg viewBox="0 0 1000 300" width="100%" height="100%" fill="none">
+    <path d="M0 205 L440 210 M0 224 L560 204" stroke="#B69CFF" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
+    <path d="M30 152 C40 120 75 98 130 94 L800 94 C860 94 920 100 965 112 L968 124 C930 130 860 150 760 172 L700 186 L120 188 C70 186 40 172 30 152 Z" fill="#B69CFF"/>
+    <path d="M812 96 L892 10 L948 10 L928 104 Z" fill="#B69CFF"/>
+    <path d="M872 130 L988 118 L994 127 L896 139 Z" fill="#9C84F0"/>
+    <path d="M360 176 L640 214 L702 214 L540 178 Z" fill="#9C84F0"/>
+    <rect x="548" y="186" width="72" height="22" rx="11" fill="#8B73E6"/>
+    <rect x="420" y="196" width="86" height="28" rx="14" fill="#B69CFF"/>
+    <path d="M150 117 L790 117 M150 147 L700 147" stroke="#100D1C" stroke-width="5" stroke-linecap="round" stroke-dasharray="0.1 13" opacity="0.55"/>
+  </svg>
+</div>
+
+<header>
+  <div class="bar">
+    <div class="brand">
+      <div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B69CFF" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" opacity="0.55"/><path d="M12 12 L18.4 5.6"/><circle cx="12" cy="12" r="1.4" fill="#B69CFF"/></svg></div>
+      <div><h1>Distributed ATC</h1><div class="sub">SOFE4790U Group 6 · synthetic data, not real aviation procedures</div></div>
+    </div>
+    <nav class="tabs" aria-label="Views"><a href="#live" id="tab-live">Live</a><a href="#evaluation" id="tab-evaluation">Evaluation</a></nav>
+    <div class="services" id="services"></div>
+    <div class="clock"><b id="clock">--:--:--</b><span>live · refreshes every 0.5 s</span></div>
+  </div>
+</header>
+<div class="banner" id="banner" role="status"></div>
+
+<main id="view-live">
+  <section class="hero" aria-label="3D airfield">
+    <div class="scene no-data" id="scene">
+      <div class="viewport"><div class="stage" id="stage"></div></div>
+      <div class="waiting" id="waiting">Waiting for the control service to publish its first snapshot…</div>
+      <div class="hud top">
+        <div>
+          <div class="eyebrow" id="hud-code">YYZ · LIVE AIRFIELD</div>
+          <div class="hud-title">Runway picture</div>
+          <div class="hud-hint"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v4"/></svg>Drag to orbit · Ctrl + scroll to zoom · double-click to reset</div>
+        </div>
+        <div class="controls">
+          <div class="seg" role="group" aria-label="Airport" id="ap-buttons"></div>
+          <div class="seg" role="group" aria-label="Camera" id="view-buttons"></div>
+          <div class="seg" role="group" aria-label="Rotate">
+            <button class="icon" id="rot-l" aria-label="Rotate left"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+            <button class="icon" id="rot-r" aria-label="Rotate right"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="hud bottom">
+        <div class="stats" id="hud-stats"></div>
+        <div class="legend">
+          <span><i style="background: var(--run)"></i>in use</span>
+          <span><i style="background: var(--accent)"></i>booked</span>
+          <span><i style="background: var(--emerg)"></i>emergency</span>
+          <span><i style="background: var(--taxi)"></i>taxiing</span>
+          <span><i style="background: var(--air)"></i>airborne</span>
+        </div>
+      </div>
+    </div>
+    <aside class="strips" aria-label="Flight strips">
+      <div class="strips-head"><h2>Flight strips</h2><span class="eyebrow" id="strips-code">YYZ</span><span class="meta" style="margin-left: auto">select to focus</span></div>
+      <div id="strips"></div>
+    </aside>
+  </section>
+
+  <div class="airports" id="airports"></div>
+
+  <section class="card">
+    <div class="card-head"><h2>Recent events</h2><span class="meta" id="stats" style="margin-left: auto"></span></div>
+    <div class="events" id="events"></div>
+  </section>
+</main>
+
+<main id="view-evaluation">
+  <div>
+    <div class="eyebrow">EVALUATION · <span id="eval-source">results</span></div>
+    <h2 style="margin: 4px 0 0; font: 600 36px/1.15 var(--display); letter-spacing: -0.02em">Every invariant checked, under crash and load</h2>
+    <p class="meta" style="margin: 8px 0 0; font-size: 14px; max-width: 700px">The scenario runner starts the real processes on their own ports, drives them as scripted aircraft and control clients, and checks the allocator's durable log afterwards.</p>
+  </div>
+  <div class="tiles" id="eval-tiles"></div>
+  <section class="card">
+    <div class="card-head"><h2>Load test</h2><span class="meta">scenario 7 · allocator with and without fsync before each reply</span></div>
+    <div class="charts"><div class="chart" id="chart-p99"></div><div class="chart" id="chart-tput"></div></div>
+    <div class="section" id="load-table"></div>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Scenario checks</h2><span class="meta">checks against the allocator's write-ahead log</span></div>
+    <div id="scenarios"></div>
+  </section>
+</main>
+
+<footer>Listen-only view: this page reads the same heartbeats and STATE snapshots as the console Monitor and never sends anything to the system.</footer>
+</div>
+
+<script>
+"use strict";
+const POLL_MS = 500;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const secs = (ms) => (Math.max(0, ms) / 1000).toFixed(1) + " s";
+const hms = (t) => new Date(t).toLocaleTimeString([], { hour12: false });
+const short = (id) => String(id || "").replace(/^.*-(AC)/, "$1").replace(/^[A-Z]{3}-/, "");
+
+const COLOR = { air: "#8EA7FF", run: "#5EE3B5", taxi: "#FFB86B", emerg: "#FF7A93", park: "#8C83A8", accent: "#B69CFF" };
+const PHASE_COLOR = { APPROACH: COLOR.air, DEPARTED: COLOR.air, LANDING: COLOR.run, TAKEOFF_ROLL: COLOR.run,
+                      TAXI_IN: COLOR.taxi, TAXI_OUT: COLOR.taxi, HOLDING_SHORT: COLOR.taxi, PARKED: COLOR.park };
+// Exterior lights by phase, roughly what crews switch on: landing lights on approach/landing/takeoff (below 10,000 ft),
+// taxi light on the ground, strobes on the runway and in the air, beacon whenever engines run, nav lights always.
+const LIGHTS = { APPROACH: "nav strobe beacon land", LANDING: "nav strobe beacon land", TAKEOFF_ROLL: "nav strobe beacon land",
+                 DEPARTED: "nav strobe beacon", TAXI_IN: "nav beacon taxi", TAXI_OUT: "nav beacon taxi",
+                 HOLDING_SHORT: "nav beacon taxi", PARKED: "nav" };
+const LIGHT_NAMES = { nav: "navigation", strobe: "strobes", beacon: "beacon", land: "landing", taxi: "taxi" };
+const STATUS_TAG = { ASSIGNED: "t-ok", ACKED: "t-ok", COMPLETED: "t-idle", CANCELLED: "t-idle", FORWARDED: "t-info", HELD: "t-warn", WAIT: "t-warn", REJECTED: "t-bad" };
+const KIND_TAG = { BUMPED: "t-bad", RECONCILE: "t-warn", RECONCILED: "t-ok", ALLOCATOR_UNREACHABLE: "t-bad", ALLOCATOR_REACHABLE: "t-ok",
+                   ACK_TIMEOUT: "t-warn", INSTRUCTION: "t-info", RESERVATION: "t-info", ACKED: "t-ok" };
+const tag = (text, cls) => text ? `<span class="tag ${cls || STATUS_TAG[text] || "t-idle"}">${esc(text)}</span>` : "–";
+
+// ---------------------------------------------------------------- airfield layouts
+// Plate is 960 x 560 px. Runways keyed by config id: [x, y, length px, angle deg] from the start (first) designator.
+// YYZ follows Pearson's pattern, YOW an Ottawa-style crossing layout. Unknown runways fall back to a simple stack.
+const LAYOUTS = {
+  YYZ: {
+    runways: { "YYZ-05/23": [130, 62, 660, 0], "YYZ-15R/33L": [430, 62, 280, 90], "YYZ-15L/33R": [570, 62, 345, 90],
+               "YYZ-06L/24R": [220, 450, 600, 0], "YYZ-06R/24L": [170, 500, 560, 0] },
+    taxis: [[130, 88, 660, 8], [636, 96, 8, 330]],
+    terminal: [790, 290], tower: [680, 170], hold: [40, 270], name: "T1"
+  },
+  YOW: {
+    runways: { "YOW-07/25": [150, 330, 640, 0], "YOW-14/32": [260, 70, 520, 40], "YOW-04/22": [470, 520, 300, -42] },
+    taxis: [[150, 356, 640, 8], [790, 356, 8, 40]],
+    terminal: [850, 448], tower: [850, 170], hold: [40, 160], name: "YOW"
+  }
+};
+function layoutFor(ap) {
+  const known = LAYOUTS[ap.id];
+  const L = { runways: {}, taxis: known ? known.taxis : [], terminal: known ? known.terminal : [820, 430],
+              tower: known ? known.tower : [860, 140], hold: known ? known.hold : [40, 200], name: known ? known.name : ap.id };
+  const unknown = ap.runways.filter((r) => !(known && known.runways[r.id]));
+  ap.runways.forEach((r) => { if (known && known.runways[r.id]) L.runways[r.id] = known.runways[r.id]; });
+  unknown.forEach((r, i) => { L.runways[r.id] = [150, 60 + i * Math.min(80, 420 / Math.max(1, unknown.length)), Math.round(Math.min(600, r.lengthM / 3400 * 600)), 0]; });
+  return L;
+}
+function rwGeom(L, id) {
+  const r = L.runways[id] || Object.values(L.runways)[0];
+  if (!r) return null;
+  const a = r[3] * Math.PI / 180, u = [Math.cos(a), Math.sin(a)], n = [-Math.sin(a), Math.cos(a)];
+  return { x: r[0], y: r[1], len: r[2], angle: r[3], u, n, end: [r[0] + u[0] * r[2], r[1] + u[1] * r[2]] };
+}
+// terminal gates: two per side on each of the three piers
+const PIERS = [-150, -30, 90];
+function gates(L) {
+  const g = [];
+  for (const A of PIERS) {
+    const a = A * Math.PI / 180, u = [Math.cos(a), Math.sin(a)], n = [-Math.sin(a), Math.cos(a)];
+    for (const s of [52, 84]) for (const side of [26, -26]) {
+      const x = L.terminal[0] + u[0] * s + n[0] * side, y = L.terminal[1] + u[1] * s + n[1] * side;
+      g.push({ x, y, heading: Math.atan2(-side * n[1], -side * n[0]) * 180 / Math.PI });
+    }
+  }
+  return g;
+}
+
+// ---------------------------------------------------------------- 3D building blocks (plain markup strings)
+const panel = (angle, w, h, z, bg, ox = 0, oy = 0) =>
+  `<div class="p3" style="left:${ox}px;top:${oy}px;transform:rotateZ(${angle}deg)"><div class="stand" style="left:${-w / 2}px;top:${-h}px;width:${w}px;height:${h}px;transform:translateZ(${z}px) rotateX(-90deg);background:${bg}"></div></div>`;
+const disk = (r, z, bg, extra = "") =>
+  `<div style="position:absolute;left:${-r}px;top:${-r}px;width:${2 * r}px;height:${2 * r}px;border-radius:50%;background:${bg};transform:translateZ(${z}px);${extra}"></div>`;
+const SHADES = ["#F1EEF7", "#E6E1EF", "#D8D2E6", "#CFC8E0", "#D8D2E6", "#E6E1EF"];
+const DARK = ["#C9C1DC", "#BDB4D3", "#AFA6C8", "#A69CC0", "#AFA6C8", "#BDB4D3"];
+const GLASS = (i) => `linear-gradient(to bottom, ${SHADES[i]} 0 16%, #2A2050 16% 24%, rgba(${190 - i * 5},${170 - i * 5},255,${0.62 - i * 0.02}) 24% 76%, #2A2050 76% 82%, ${SHADES[i]} 82%)`;
+const LIT = (i, top) => `repeating-linear-gradient(to right, transparent 0 7px, rgba(20,15,36,0.5) 7px 8px), linear-gradient(to bottom, ${SHADES[i]} 0 ${top}%, rgba(255,196,128,${0.88 - i * 0.04}) ${top}% ${100 - top}%, ${DARK[i]} ${100 - top}%)`;
+
+// Control tower modelled on Toronto Pearson's: slim white shaft, a banded drum, a glass cab, flat overhanging roof, antennas.
+function towerHTML(x, y) {
+  let h = `<div class="p3" style="left:${x}px;top:${y}px">`;
+  h += `<div style="position:absolute;left:-88px;top:-88px;width:176px;height:176px;border-radius:50%;border:1px solid rgba(182,156,255,0.25);overflow:hidden"><div class="sweep" style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg, rgba(182,156,255,0.45), rgba(182,156,255,0) 24%)"></div><div style="position:absolute;inset:28%;border-radius:50%;border:1px dashed rgba(182,156,255,0.25)"></div></div>`;
+  h += `<div style="position:absolute;left:-26px;top:-9px;width:64px;height:18px;border-radius:50%;background:#000;filter:blur(6px);opacity:0.45"></div>`;
+  for (let i = 0; i < 6; i++) h += panel(i * 30, 16, 118, 0, `linear-gradient(to bottom, ${SHADES[i]}, ${DARK[i]})`);
+  h += disk(15, 118, "#E6E1EF");
+  for (let i = 0; i < 6; i++) h += panel(i * 30, 30, 30, 118, `linear-gradient(to bottom, ${SHADES[i]} 0 24%, #251E40 24% 44%, ${SHADES[i]} 44% 60%, #251E40 60% 74%, ${DARK[i]} 74%)`);
+  h += disk(15, 148, "#E6E1EF");
+  for (let i = 0; i < 3; i++) h += panel(i * 60, 20, 12, 148, SHADES[i + 1]);
+  h += disk(16, 161, "#B69CFF", "box-shadow:0 0 34px 6px rgba(182,156,255,0.7)");
+  for (let i = 0; i < 6; i++) h += panel(i * 30, 38, 26, 160, GLASS(i));
+  h += disk(23, 186, "#F3EFFA", "box-shadow:0 0 0 2px #C9C1DC") + disk(12, 189, "#DDD7EA");
+  h += panel(0, 2, 30, 189, "#E6E1EF") + panel(90, 2, 30, 189, "#CFC8E0") + panel(45, 2, 16, 186, "#E6E1EF", 9, 0) + panel(-45, 2, 18, 186, "#E6E1EF", -9, 4);
+  h += `<div class="blink" style="position:absolute;left:-3px;top:-3px;width:6px;height:6px;border-radius:50%;background:#FF4D5E;box-shadow:0 0 12px 2px #FF4D5E;transform:translateZ(220px)"></div>`;
+  return h + "</div>";
+}
+
+// Terminal modelled on Pearson's Terminal 1: a round hub with a ribbed dome and three piers in a Y.
+function terminalHTML(x, y, name) {
+  let h = `<div class="p3" style="left:${x}px;top:${y}px">`;
+  h += `<div style="position:absolute;left:-128px;top:-112px;width:256px;height:232px;border-radius:48% 48% 40% 40%;background:#1E1834;border:1px solid #2E2645;box-shadow:inset 0 0 0 10px rgba(43,36,67,0.6)"></div>`;
+  h += `<div style="position:absolute;left:-60px;top:-40px;width:120px;height:90px;border-radius:50%;background:#000;filter:blur(14px);opacity:0.35"></div>`;
+  for (const A of PIERS) {
+    h += `<div class="p3" style="transform:rotateZ(${A}deg)">`;
+    h += `<div style="position:absolute;left:30px;top:-7px;width:80px;height:14px;background:#000;filter:blur(5px);opacity:0.4"></div>`;
+    h += `<div class="stand" style="left:30px;top:-5px;width:80px;height:12px;transform:rotateX(-90deg);background:${LIT(0, 18)}"></div>`;
+    h += `<div class="stand" style="left:30px;top:-19px;width:80px;height:12px;transform:rotateX(-90deg);background:${LIT(2, 18)}"></div>`;
+    h += `<div style="position:absolute;left:30px;top:-7px;width:80px;height:14px;border-radius:3px;background:repeating-linear-gradient(to right, #E6E1EF 0 6px, #CFC8E0 6px 7px);transform:translateZ(12px)"></div>`;
+    h += `<div style="position:absolute;left:98px;top:-15px;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle, #F3EFFA 0 40%, #D8D2E6 41%);box-shadow:0 0 14px rgba(255,196,128,0.35);transform:translateZ(12px)"></div>`;
+    for (const gx of [50, 82]) for (const gy of [7, -17]) h += `<div style="position:absolute;left:${gx}px;top:${gy}px;width:4px;height:10px;background:#B3ABCB;transform:translateZ(6px)"></div>`;
+    h += "</div>";
+  }
+  for (let i = 0; i < 6; i++) h += panel(i * 30, 68, 18, 0, LIT(i, 14));
+  h += disk(36, 18, "repeating-conic-gradient(from 0deg, #E6E1EF 0deg 8deg, #CFC8E0 8deg 10deg)");
+  h += disk(27, 23, "repeating-conic-gradient(from 0deg, #F1EEF7 0deg 8deg, #D8D2E6 8deg 10deg)");
+  h += disk(17, 27, "radial-gradient(circle, #FFFFFF, #E6E1EF)", "box-shadow:0 0 24px rgba(255,196,128,0.35)");
+  h += `<span style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) translateZ(28px);font:700 11px var(--display);letter-spacing:0.08em;color:#352C4F;white-space:nowrap">${esc(name)}</span>`;
+  return h + "</div>";
+}
+
+function runwayHTML(id, r) {
+  const des = id.replace(/^[A-Z]{3}-/, "").split("/");
+  const c = -r[3];
+  return `<div class="rw" data-rw="${esc(id)}" style="left:${r[0]}px;top:${r[1] - 9}px;width:${r[2]}px;transform:rotate(${r[3]}deg)">
+    <div class="keys"></div><div class="tdz" style="top:3px"></div><div class="tdz" style="bottom:3px"></div><div class="cl"></div>
+    <div class="edge" style="top:-2px"></div><div class="edge" style="bottom:-2px"></div><div class="thr"></div><div class="end"></div>
+    <div class="als"></div><div class="bar-x"></div><span class="rabbit"></span>
+    <span class="des" style="left:2px;transform:translateY(-50%) rotate(${c}deg) translateY(-22px)">${esc(des[0])}</span>
+    <span class="des" style="right:2px;transform:translateY(-50%) rotate(${c}deg) translateY(-22px)">${esc(des[1] || "")}</span>
+    <span class="st" style="transform:translate(-50%,-50%) rotate(${c}deg) translateY(24px)"></span></div>`;
+}
+
+const PLAN = "M23 12 C23 11.2 22 10.9 21 10.9 L15 10.9 L10.5 3 L8.6 3 L11.2 10.9 L5.5 10.9 L3.6 8.2 L2.2 8.2 L3.2 12 L2.2 15.8 L3.6 15.8 L5.5 13.1 L11.2 13.1 L8.6 21 L10.5 21 L15 13.1 L21 13.1 C22 13.1 23 12.8 23 12 Z";
+const SIDE = "M3 8 C3 6.5 4 5.5 6 5.5 L25 5.5 C27.5 5.5 29.5 7 29.5 8.5 C29.5 10 28 11 26 11 L6 11 C4 11 3 9.5 3 8 Z M3.5 6.5 L5 0.5 L8 0.5 L10 6.5 Z";
+function makeCraft(id) {
+  const el = document.createElement("div");
+  el.className = "ac";
+  el.dataset.id = id;
+  el.innerHTML = `<div class="shadow"></div><div class="stalk"></div><div class="path"></div>
+    <div class="lift"><span class="pulse"></span>
+      <div class="rot"><div class="model">
+        <svg class="plan" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="${PLAN}" fill="currentColor"/></svg>
+        <svg class="side" width="30" height="12" viewBox="0 0 30 12" aria-hidden="true"><path d="${SIDE}" fill="currentColor"/><rect x="13" y="10.3" width="5" height="1.7" rx="0.85" fill="#140F24" opacity="0.45"/><path d="M9 7.3 L26 7.3 M9 9.3 L25 9.3" stroke="#140F24" stroke-width="0.7" stroke-dasharray="0.6 1.2" opacity="0.6"/></svg>
+        <span class="lt lt-land"></span><span class="lt lt-taxi"></span><span class="lt lt-front"></span>
+        <span class="lt lt-nav lt-red"></span><span class="lt lt-nav lt-green"></span><span class="lt lt-nav lt-tail"></span>
+        <span class="lt lt-strobe" style="left:-5.1px;top:-13.2px"></span><span class="lt lt-strobe" style="left:-5.1px;top:9.2px"></span>
+        <span class="lt lt-beacon"></span>
+      </div></div>
+      <button class="tagbtn" aria-label="Focus ${esc(id)}"></button>
+    </div>`;
+  el.querySelector(".tagbtn").addEventListener("click", (e) => { e.stopPropagation(); select(id); });
+  return el;
+}
+
+// ---------------------------------------------------------------- view state
+const ui = { ap: "YYZ", sel: null, tilt: 56, spin: -24, zoom: 0.8, view: "tower", builtFor: null, layout: null, crafts: new Map(), last: null };
+const VIEWS = [{ id: "top", label: "Top", tilt: 0, spin: 0 }, { id: "tower", label: "Tower", tilt: 56, spin: -24 }, { id: "approach", label: "Approach", tilt: 68, spin: 34 }];
+
+function setCamera(mode) {
+  const stage = $("stage");
+  stage.classList.toggle("quick", mode === "quick");
+  stage.classList.toggle("instant", mode === "instant");
+  stage.style.transform = `translateY(36px) scale(${ui.zoom}) rotateX(${ui.tilt}deg) rotateZ(${ui.spin}deg)`;
+  for (const el of ui.crafts.values()) el.querySelector(".tagbtn").style.transform = billboard();
+  renderViewButtons();
+}
+const billboard = () => `rotateZ(${-ui.spin}deg) rotateX(${-ui.tilt}deg) translate(-50%, -165%)`;
+function select(id) { ui.sel = id; if (ui.last) renderLive(ui.last); }
+
+function renderViewButtons() {
+  $("view-buttons").innerHTML = VIEWS.map((v) => `<button data-view="${v.id}" class="${ui.view === v.id ? "on" : ""}" aria-pressed="${ui.view === v.id}">${v.label}</button>`).join("");
+}
+$("view-buttons").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-view]");
+  if (!b) return;
+  const v = VIEWS.find((x) => x.id === b.dataset.view);
+  Object.assign(ui, { view: v.id, tilt: v.tilt, spin: v.spin });
+  setCamera();
+});
+$("ap-buttons").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-ap]");
+  if (!b || b.dataset.ap === ui.ap) return;
+  ui.ap = b.dataset.ap;
+  ui.sel = null;
+  if (ui.last) renderLive(ui.last);
+});
+$("rot-l").addEventListener("click", () => { ui.spin -= 30; ui.view = "custom"; setCamera(); });
+$("rot-r").addEventListener("click", () => { ui.spin += 30; ui.view = "custom"; setCamera(); });
+
+// mouse camera: drag to orbit (x = spin, y = tilt), Ctrl + wheel (or pinch) to zoom, double-click to reset.
+// A plain wheel keeps scrolling the page; a press that doesn't move stays a click.
+(function mouseCamera() {
+  const scene = $("scene");
+  let drag = null;
+  scene.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || e.target.closest("button")) return;
+    drag = { x: e.clientX, y: e.clientY, spin: ui.spin, tilt: ui.tilt, moved: false, id: e.pointerId };
+  });
+  scene.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved) {
+      if (Math.abs(dx) + Math.abs(dy) < 4) return;
+      drag.moved = true;
+      try { scene.setPointerCapture(drag.id); } catch (err) { /* optional */ }
+      scene.classList.add("dragging");
+    }
+    ui.spin = drag.spin + dx * 0.35;
+    ui.tilt = Math.max(0, Math.min(82, drag.tilt - dy * 0.25));
+    ui.view = "custom";
+    setCamera("instant");
+  });
+  const end = () => { drag = null; scene.classList.remove("dragging"); };
+  scene.addEventListener("pointerup", end);
+  scene.addEventListener("pointercancel", end);
+  scene.addEventListener("dblclick", () => { Object.assign(ui, { view: "tower", tilt: 56, spin: -24, zoom: 0.8 }); setCamera(); });
+  scene.addEventListener("wheel", (e) => {
+    if (!e.ctrlKey && !e.metaKey) return; // trackpad pinch arrives as ctrl + wheel
+    e.preventDefault();
+    ui.zoom = Math.max(0.5, Math.min(1.4, ui.zoom - e.deltaY * 0.0012));
+    setCamera("quick");
+  }, { passive: false });
+})();
+
+// ---------------------------------------------------------------- live data helpers
+function latestRequests(s) {
+  const m = new Map();
+  for (const r of s.requests) m.set(r.aircraftId, r); // later = newer
+  return m;
+}
+function aircraftList(s) {
+  const pos = new Map(s.aircraft.map((p) => [p.aircraftId, p]));
+  const req = latestRequests(s);
+  const ids = [...new Set([...pos.keys(), ...req.keys()])].sort();
+  return ids.map((id) => ({ id, p: pos.get(id), r: req.get(id) }));
+}
+const holdsSlot = (r) => r && r.runwayId && r.slotStart != null && r.slotEnd != null && (r.status === "ASSIGNED" || r.status === "ACKED");
+function slotText(r, now) {
+  if (!r || r.slotStart == null || r.slotEnd == null) return "";
+  if (now < r.slotStart) return "in " + secs(r.slotStart - now);
+  if (now < r.slotEnd) return secs(r.slotEnd - now) + " left";
+  return "done";
+}
+const isAirborne = (p) => p && (p.altitudeFt > 0 || p.phase === "DEPARTED");
+
+// Map a simulator position (its own geometry: runway along y=0 from x=0 to 2500 m, gates at y=-900) onto the real layout.
+function place(a, L, gateList, departIndex) {
+  const p = a.p, r = a.r;
+  const g = rwGeom(L, r && r.runwayId);
+  const n = Number((a.id.match(/(\d+)$/) || [0, 1])[1]);
+  const gate = gateList[(n - 1 + gateList.length) % gateList.length];
+  const zOf = (alt) => Math.min(alt, 10000) / 10000 * 230;
+  const lerp = (A, B, f) => [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f];
+  const head = (A, B) => Math.atan2(B[1] - A[1], B[0] - A[0]) * 180 / Math.PI;
+  if (!g) return { x: gate.x, y: gate.y, z: 0, heading: gate.heading, path: 0 };
+  const T = [g.x, g.y];
+  const holdPt = [T[0] + g.u[0] * 12 + g.n[0] * 28, T[1] + g.u[1] * 12 + g.n[1] * 28];
+  const exitPt = [g.end[0] - g.u[0] * 40 + g.n[0] * 28, g.end[1] - g.u[1] * 40 + g.n[1] * 28];
+  const G = [gate.x, gate.y];
+  const f01 = (v) => Math.max(0, Math.min(1, v));
+  switch (p.phase) {
+    case "LANDING":
+    case "TAKEOFF_ROLL": {
+      const f = f01(p.x / 2500);
+      return { x: T[0] + g.u[0] * g.len * f, y: T[1] + g.u[1] * g.len * f, z: 0, heading: g.angle, path: 0 };
+    }
+    case "APPROACH": {
+      if (p.y === 0 && p.x <= 0 && r && r.runwayId) { // on final for its runway
+        const d = Math.min(15000, -p.x) / 15000 * 190;
+        return { x: T[0] - g.u[0] * d, y: T[1] - g.u[1] * d, z: zOf(p.altitudeFt), heading: g.angle, path: d, pathAngle: g.angle };
+      }
+      const ang = Math.atan2(p.y, p.x + 20000); // holding pattern around the fix
+      return { x: L.hold[0] + Math.cos(ang) * 40, y: L.hold[1] + Math.sin(ang) * 40, z: zOf(p.altitudeFt), heading: ang * 180 / Math.PI + 90, path: 0 };
+    }
+    case "DEPARTED": {
+      const k = departIndex;
+      return { x: g.end[0] + g.u[0] * 70 + g.n[0] * (-30 - k * 26), y: g.end[1] + g.u[1] * 70 + g.n[1] * (-30 - k * 26), z: zOf(10000), heading: g.angle - 12, path: 0 };
+    }
+    case "TAXI_OUT": {
+      const f = f01((p.y + 900) / 750), P = lerp(G, holdPt, f);
+      return { x: P[0], y: P[1], z: 0, heading: head(G, holdPt), path: 0 };
+    }
+    case "HOLDING_SHORT":
+      return { x: holdPt[0], y: holdPt[1], z: 0, heading: g.angle, path: 0 };
+    case "TAXI_IN": {
+      const f = f01((-150 - p.y) / 750), P = lerp(exitPt, G, f);
+      return { x: P[0], y: P[1], z: 0, heading: head(exitPt, G), path: 0 };
+    }
+    default:
+      return { x: gate.x, y: gate.y, z: 0, heading: gate.heading, path: 0 };
+  }
+}
+
+// ---------------------------------------------------------------- rendering: 3D hero + strips
+function buildStatic(ap, L) {
+  let h = `<div class="plate"></div><div class="plate-edge"></div>`;
+  h += L.taxis.map((t) => `<div class="taxi" style="left:${t[0]}px;top:${t[1]}px;width:${t[2]}px;height:${t[3]}px"></div>`).join("");
+  h += Object.entries(L.runways).map(([id, r]) => runwayHTML(id, r)).join("");
+  h += terminalHTML(L.terminal[0], L.terminal[1], L.name) + towerHTML(L.tower[0], L.tower[1]);
+  h += `<div class="p3" id="craft-layer"></div>`;
+  $("stage").innerHTML = h;
+  ui.crafts.clear();
+  ui.builtFor = ap.id;
+  ui.layout = L;
+}
+
+function renderLive(d) {
+  const now = d.now;
+  if (!d.airports.some((a) => a.id === ui.ap)) ui.ap = d.airports[0] ? d.airports[0].id : ui.ap;
+  $("ap-buttons").innerHTML = d.airports.map((a) => `<button class="mono ${a.id === ui.ap ? "on" : ""}" data-ap="${esc(a.id)}" aria-pressed="${a.id === ui.ap}">${esc(a.id)}</button>`).join("");
+  $("hud-code").textContent = ui.ap + " · LIVE AIRFIELD";
+  $("strips-code").textContent = ui.ap;
+
+  const ap = d.airports.find((a) => a.id === ui.ap);
+  if (ui.builtFor !== ap.id) { buildStatic(ap, layoutFor(ap)); setCamera("instant"); }
+  const L = ui.layout, s = ap.state;
+  $("scene").classList.toggle("no-data", !s);
+  $("waiting").textContent = `Waiting for control-${ap.id} to publish its first snapshot…`;
+
+  // global HUD numbers
+  let tracked = 0, airborne = 0, held = 0;
+  for (const a of d.airports) {
+    if (!a.state) continue;
+    const list = aircraftList(a.state);
+    tracked += list.length;
+    airborne += list.filter((x) => isAirborne(x.p)).length;
+    held += a.state.requests.filter((r) => holdsSlot(r) && r.slotEnd > now).length;
+  }
+  const alloc = d.services.find((x) => x.name === "allocator");
+  $("hud-stats").innerHTML = [[tracked, "aircraft tracked"], [airborne, "airborne"], [held, "runway slots held"],
+    [alloc && alloc.heartbeatAgeMs != null ? secs(alloc.heartbeatAgeMs) : "–", "allocator heartbeat"]]
+    .map(([v, l]) => `<div class="stat"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join("");
+
+  if (!s) { $("strips").innerHTML = `<div class="empty">No snapshot from control-${esc(ap.id)} yet.</div>`; return; }
+  const list = aircraftList(s);
+  if (ui.sel && !list.some((a) => a.id === ui.sel)) ui.sel = null;
+  if (!ui.sel) { const e = list.find((a) => a.r && a.r.emergency) || list.find((a) => a.p && a.p.phase === "APPROACH") || list[0]; ui.sel = e ? e.id : null; }
+
+  // runway states from the slots the control service holds
+  for (const el of document.querySelectorAll("#stage .rw")) {
+    const id = el.dataset.rw;
+    const slots = s.requests.filter((r) => holdsSlot(r) && r.runwayId === id && r.slotEnd > now).sort((a, b) => a.slotStart - b.slotStart);
+    const active = slots.find((r) => r.slotStart <= now), next = slots.find((r) => r.slotStart > now);
+    const emerg = slots.some((r) => r.emergency);
+    const tone = emerg ? ["#FF7A93", "rgba(255,122,147,0.4)", "rgba(255,122,147,0.85)"]
+      : active ? ["#5EE3B5", "rgba(94,227,181,0.35)", "rgba(94,227,181,0.75)"]
+      : next ? ["#B69CFF", "rgba(182,156,255,0.3)", "rgba(182,156,255,0.7)"] : ["#6E6390", "transparent", "#352C4F"];
+    el.style.borderColor = tone[2];
+    el.style.boxShadow = `0 0 26px ${tone[1]}`;
+    el.classList.toggle("lit", slots.length > 0);
+    const st = el.querySelector(".st");
+    st.style.color = tone[0];
+    st.textContent = active ? `IN USE · ${short(active.aircraftId)}${next ? " · " + short(next.aircraftId) + " next" : ""}`
+      : next ? `${short(next.aircraftId)} · ${secs(next.slotStart - now)}${next.emergency ? " · EMERGENCY" : ""}` : "";
+  }
+
+  // aircraft
+  const layer = $("craft-layer"), gateList = gates(L), seen = new Set();
+  let departIndex = 0;
+  for (const a of list) {
+    if (!a.p) continue;
+    seen.add(a.id);
+    let el = ui.crafts.get(a.id);
+    if (!el) { el = makeCraft(a.id); layer.appendChild(el); ui.crafts.set(a.id, el); el._h = null; }
+    const pl = place(a, L, gateList, a.p.phase === "DEPARTED" ? departIndex++ : 0);
+    const color = a.r && a.r.emergency && a.p.phase !== "DEPARTED" && a.p.phase !== "PARKED" ? COLOR.emerg : (PHASE_COLOR[a.p.phase] || COLOR.park);
+    let hd = pl.heading;
+    if (el._h != null) { while (hd - el._h > 180) hd -= 360; while (hd - el._h < -180) hd += 360; }
+    el._h = hd;
+    el.style.setProperty("--c", color);
+    el.style.transform = `translate3d(${pl.x}px, ${pl.y}px, 0)`;
+    el.dataset.l = LIGHTS[a.p.phase] || "";
+    el.classList.toggle("sel", a.id === ui.sel);
+    el.querySelector(".lift").style.transform = `translateZ(${pl.z}px)`;
+    el.querySelector(".rot").style.transform = `rotateZ(${hd}deg)`;
+    el.querySelector(".stalk").style.height = pl.z + "px";
+    el.querySelector(".shadow").style.opacity = pl.z > 0 ? 0.3 : 0.55;
+    const path = el.querySelector(".path");
+    path.style.width = (pl.path || 0) + "px";
+    path.style.transform = `rotate(${pl.pathAngle || 0}deg)`;
+    const btn = el.querySelector(".tagbtn");
+    btn.textContent = short(a.id) + (a.r && a.r.emergency && a.p.phase !== "DEPARTED" ? " · EMERG" : "");
+    btn.style.transform = billboard();
+  }
+  for (const [id, el] of ui.crafts) if (!seen.has(id)) { el.remove(); ui.crafts.delete(id); }
+
+  // flight strips
+  $("strips").innerHTML = list.map((a) => {
+    const p = a.p, r = a.r, phase = p ? p.phase : "?";
+    const color = r && r.emergency ? COLOR.emerg : (PHASE_COLOR[phase] || COLOR.park);
+    const lights = (LIGHTS[phase] || "").split(" ").filter(Boolean).map((k) => LIGHT_NAMES[k]).join(" · ");
+    const note = r && r.emergency ? `<span style="color:#FF8FA6">Emergency declared · priority slot</span>` : "";
+    return `<button class="strip ${a.id === ui.sel ? "sel" : ""}" data-sel="${esc(a.id)}" style="--c:${color}" aria-pressed="${a.id === ui.sel}">
+      <div class="cells">
+        <div><div class="big"><span class="dot" style="background:${color}"></span>${esc(a.id)}</div><div class="small">${esc(r && r.sizeClass ? r.sizeClass : "–")} · ${esc(r ? r.operation : "–")}</div></div>
+        <div><div class="mid">${esc(phase)}</div><div class="small">${p ? `${Math.round(p.altitudeFt).toLocaleString()} ft · ${Math.round(p.speedKt)} kt` : ""}</div></div>
+        <div><div class="big" style="font-size:13px">${esc(r && r.runwayId ? r.runwayId.replace(/^[A-Z]{3}-/, "") : "–")}</div><div class="small">${esc(slotText(r, now))}</div></div>
+      </div>
+      <div class="more">${r ? tag(r.status) : ""}<span>taxiway ${esc(r && r.taxiwayId ? r.taxiwayId : "–")}</span>${note}<span style="flex-basis:100%;font-size:11.5px;color:var(--muted)">Lights on: ${esc(lights || "none")}</span></div>
+    </button>`;
+  }).join("") || `<div class="empty">No aircraft yet.</div>`;
+}
+$("strips").addEventListener("click", (e) => { const b = e.target.closest("[data-sel]"); if (b) select(b.dataset.sel); });
+
+// ---------------------------------------------------------------- rendering: header, panels, events
+function renderServices(d) {
+  $("services").innerHTML = d.services.map((s) => `<span class="pill" title="${s.heartbeatAgeMs == null ? "never seen" : "last heartbeat " + secs(s.heartbeatAgeMs) + " ago"}">
+    <span class="dot ${s.up ? "up" : "down"}"></span>${esc(s.name)}<span class="age">${s.up ? "UP" : "DOWN"}${s.heartbeatAgeMs == null ? "" : " · " + secs(s.heartbeatAgeMs)}</span></span>`).join("");
+}
+function renderBanner(d) {
+  const b = $("banner");
+  const alloc = d.services.find((s) => s.name === "allocator");
+  const unreachable = d.airports.filter((a) => a.state && !a.state.allocatorReachable).map((a) => a.id);
+  if (alloc && !alloc.up && alloc.heartbeatAgeMs != null) {
+    b.className = "banner show";
+    b.textContent = "Allocator is DOWN. Control services hold new requests (HELD) and issue no runway assignments until it is back.";
+  } else if (unreachable.length) {
+    b.className = "banner show";
+    b.textContent = `Allocator unreachable from control-${unreachable.join(", control-")}: new requests are HELD.`;
+  } else b.className = "banner";
+}
+
+function airspace(s) {
+  const up = s.aircraft.filter(isAirborne);
+  const req = latestRequests(s);
+  const dots = up.map((p) => {
+    const left = (Math.max(-24000, Math.min(23000, p.x)) + 24000) / 47000 * 100, bottom = Math.min(p.altitudeFt, 11000) / 11000 * 100;
+    const r = req.get(p.aircraftId), c = r && r.emergency ? COLOR.emerg : COLOR.air;
+    return `<div class="ad" style="left:${left}%;bottom:${bottom}%"><i style="background:${c};box-shadow:0 0 0 4px ${c}2E"></i><b>${esc(short(p.aircraftId))}</b></div>`;
+  }).join("");
+  return `<div class="airspace">
+    <div class="gl" style="bottom:90.9%"></div><div class="gt" style="bottom:90.9%">10k ft</div>
+    <div class="gl" style="bottom:45.5%"></div><div class="gt" style="bottom:45.5%">5k ft</div>
+    <div class="ground"></div><div class="rwy"></div>${dots}
+    ${up.length ? "" : `<div class="empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">no aircraft in the air</div>`}
+    <div class="axis"><span>−20 km</span><span>−10 km</span><span>0</span><span>10 km</span><span>20 km</span></div></div>`;
+}
+
+function timeline(a, d) {
+  const now = d.now, s = a.state;
+  const reqs = s.requests.filter((r) => r.runwayId && r.slotStart != null && r.slotEnd != null);
+  let horizon = 20000;
+  for (const r of reqs) if (r.slotEnd > now && holdsSlot(r)) horizon = Math.max(horizon, r.slotEnd - now + 2000);
+  horizon = Math.min(Math.ceil(horizon / 5000) * 5000, 10 * 60 * 1000);
+  const past = horizon * 0.2, t0 = now - past, span = past + horizon;
+  const pct = (t) => Math.max(0, Math.min(100, ((t - t0) / span) * 100));
+  const bufRatio = d.bufferSeconds / d.slotSeconds;
+  const rows = a.runways.map((rw) => {
+    const bars = reqs.filter((r) => r.runwayId === rw.id && r.slotEnd > t0 && r.slotStart < t0 + span).map((r) => {
+      const buf = (r.slotEnd - r.slotStart) * bufRatio, active = holdsSlot(r);
+      const bg = r.emergency && active ? "#C8325A" : active ? "#4FD1A5" : "#3A3156";
+      const ink = r.emergency && active ? "#fff" : active ? "#0B1A14" : "#A79FC2";
+      const l = pct(r.slotStart), w = Math.max(1, pct(r.slotEnd) - l), bl = pct(r.slotStart - buf), bw = pct(r.slotEnd + buf) - bl;
+      return `<div class="tl-buf" style="left:${bl}%;width:${bw}%"></div><div class="tl-bar" title="${esc(`${r.aircraftId} ${r.operation} ${r.status} ${hms(r.slotStart)}–${hms(r.slotEnd)}`)}" style="left:${l}%;width:${w}%;background:${bg};color:${ink}">${esc(short(r.aircraftId))}</div>`;
+    }).join("");
+    const cap = rw.maxSizeClass ? ` ≤${rw.maxSizeClass[0]}` : "";
+    return `<div class="tl-row"><div class="tl-name">${esc(rw.id.replace(/^[A-Z]{3}-/, ""))} <span>${rw.lengthM}m${cap}</span></div><div class="tl-track">${bars}<div class="tl-now" style="left:${pct(now)}%"></div></div></div>`;
+  }).join("");
+  return rows + `<div class="tl-axis"><div></div><div><span>−${secs(past)}</span><span>now</span><span>+${secs(horizon / 2)}</span><span>+${secs(horizon)}</span></div></div>`;
+}
+
+function aircraftTable(s, now) {
+  const list = aircraftList(s);
+  if (!list.length) return `<div class="empty">No aircraft yet.</div>`;
+  return `<div class="tablewrap"><table><thead><tr><th>Aircraft</th><th>Phase</th><th>Alt / kt</th><th>Size</th><th>Op</th><th>Request</th><th>Runway</th><th>Taxiway</th><th>Slot</th></tr></thead><tbody>
+    ${list.map(({ id, p, r }) => `<tr class="${r && r.emergency ? "emerg-row" : ""}">
+      <td>${esc(id)}${r && r.emergency ? '<span class="emerg-tag">EMERGENCY</span>' : ""}</td>
+      <td><span class="dot" style="margin-right:6px;background:${p ? PHASE_COLOR[p.phase] || COLOR.park : COLOR.park}"></span>${p ? esc(p.phase) : "?"}</td>
+      <td>${p ? `${Math.round(p.altitudeFt)} / ${Math.round(p.speedKt)}` : ""}</td>
+      <td>${r && r.sizeClass ? esc(r.sizeClass) : "–"}</td>
+      <td>${r ? esc(r.operation) : "–"}</td>
+      <td>${r ? tag(r.status) : "–"}</td>
+      <td>${r && r.runwayId ? esc(r.runwayId.replace(/^[A-Z]{3}-/, "")) : "–"}</td>
+      <td>${r && r.taxiwayId ? esc(r.taxiwayId) : "–"}</td>
+      <td>${esc(slotText(r, now))}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+function taxiways(a) {
+  const s = a.state, byReq = new Map(s.requests.map((r) => [r.requestId, r.aircraftId]));
+  const occ = s.taxiwayOccupancy || {};
+  const names = a.taxiways.length ? a.taxiways : Object.keys(occ);
+  const q = (s.taxiwayQueue || []).map((r) => byReq.get(r) || r);
+  return `<div class="twys">${names.map((t) => { const who = occ[t]; return `<div class="twy ${who ? "busy" : ""}"><b>${esc(t)}</b><span>${who ? esc(byReq.get(who) || who) : "free"}</span></div>`; }).join("")}</div>
+    ${q.length ? `<div class="queue">Queue: ${esc(q.join(", "))}</div>` : ""}`;
+}
+
+function renderPanels(d) {
+  $("airports").innerHTML = d.airports.map((a) => {
+    const s = a.state;
+    if (!s) return `<section class="card"><div class="card-head"><h2 class="ap-code">${esc(a.id)}</h2><span class="meta">no snapshot yet: control-${esc(a.id)} not heard from</span></div>
+      <div class="section empty">Start <code>atc.control.ControlService --airport ${esc(a.id)}</code> and this panel fills in.</div></section>`;
+    return `<section class="card">
+      <div class="card-head"><h2 class="ap-code">${esc(a.id)}</h2>
+        <span class="reach ${s.allocatorReachable ? "ok" : "bad"}">${s.allocatorReachable ? "Allocator reachable" : "Allocator unreachable"}</span>
+        <span class="meta" style="margin-left:auto">snapshot ${secs(a.stateAgeMs)} old · ${s.stalePositionsDropped} stale positions dropped</span></div>
+      <div class="section"><h3 class="label">Airspace <span class="hint">side profile along the runway axis</span></h3>${airspace(s)}</div>
+      <div class="section"><h3 class="label">Runway slots <span class="hint">bars = slots, grey = separation buffer, line = now</span></h3>${timeline(a, d)}</div>
+      <div class="section"><h3 class="label">Aircraft</h3>${aircraftTable(s, d.now)}</div>
+      <div class="section"><h3 class="label">Taxiways</h3>${taxiways(a)}</div></section>`;
+  }).join("");
+}
+
+function renderEvents(d) {
+  $("events").innerHTML = [...d.events].reverse().map((e) => `<div class="ev"><span class="t">${hms(e.t)}</span><span class="s">${esc(e.service)}</span>
+    <span>${tag(e.kind, KIND_TAG[e.kind] || "t-idle")}</span><span class="d">${esc(e.text)}</span></div>`).join("") || `<div class="empty" style="padding:8px 12px">No events yet.</div>`;
+  $("stats").textContent = `${d.messages} messages received · ${d.malformed} malformed`;
+}
+
+let lastOk = 0;
+async function poll() {
+  try {
+    const res = await fetch("api/state", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const d = await res.json();
+    lastOk = Date.now();
+    ui.last = d;
+    $("clock").textContent = hms(d.now);
+    renderServices(d);
+    renderBanner(d);
+    renderLive(d);
+    renderPanels(d);
+    renderEvents(d);
+  } catch (err) {
+    if (Date.now() - lastOk > 3000) {
+      $("banner").className = "banner show offline";
+      $("banner").textContent = "Lost contact with the web dashboard process (" + err.message + "). Retrying…";
+    }
+  } finally {
+    setTimeout(poll, POLL_MS);
+  }
+}
+
+// ---------------------------------------------------------------- evaluation view
+const SCENARIOS = {
+  "s1-simultaneous": ["1", "40 aircraft request at the same instant", "no overlapping or ineligible reservations"],
+  "s2-incompatible": ["2", "HEAVY aircraft at YOW (no long enough runway)", "rejected with a reason; a retry gets the same answer"],
+  "s3-duplicates": ["3", "Duplicate requests, lost reply and retry, duplicate ACKs", "exactly one decision per requestId"],
+  "s4-out-of-order": ["4", "Shuffled, duplicated and delayed position updates", "stale updates dropped, newest kept"],
+  "s5-allocator-restart": ["5", "Allocator hard-killed mid-run and restarted", "durable replies, reconciliation, no assignments during the outage"],
+  "s6-emergency": ["6", "Emergency with a pending booking in the way", "earliest slot for the emergency; the bumped aircraft is rebooked"],
+  "s7-load": ["7", "Load test, 100–2,000 req/s, with and without fsync", "throughput, latency percentiles, CPU and heap"],
+};
+const num = (v) => Number.parseFloat(v);
+const fmtMs = (v) => v >= 100 ? Math.round(v).toLocaleString() + " ms" : v.toFixed(v >= 10 ? 1 : 2) + " ms";
+
+// One-axis line chart with an ordinal x axis, legend, direct end labels and a hover crosshair + tooltip.
+function lineChart(el, opt) {
+  const W = 520, H = 240, L = 54, R = 76, T = 10, B = 34;
+  const xs = opt.x;
+  const all = opt.series.flatMap((s) => s.values).filter((v) => v > 0);
+  let sy, ticks = [];
+  if (opt.log) {
+    const yMin = Math.pow(10, Math.floor(Math.log10(Math.min(...all)))), yMax = Math.pow(10, Math.ceil(Math.log10(Math.max(...all))));
+    sy = (v) => T + (1 - (Math.log10(v) - Math.log10(yMin)) / (Math.log10(yMax) - Math.log10(yMin))) * (H - T - B);
+    for (let t = yMin; t <= yMax; t *= 10) ticks.push(t);
+  } else {
+    const yMax = Math.ceil(Math.max(...all) / opt.step) * opt.step;
+    sy = (v) => T + (1 - v / yMax) * (H - T - B);
+    for (let t = 0; t <= yMax; t += opt.step) ticks.push(t);
+  }
+  const sx = (i) => L + (i / (xs.length - 1)) * (W - L - R);
+  const grid = ticks.map((t) => `<line x1="${L}" x2="${W - R}" y1="${sy(t)}" y2="${sy(t)}"/>`).join("");
+  const yLabels = ticks.map((t) => `<text x="${L - 8}" y="${sy(t) + 4}" text-anchor="end">${opt.tick(t)}</text>`).join("");
+  const xLabels = xs.map((x, i) => `<text x="${sx(i)}" y="${H - B + 18}" text-anchor="middle">${x}</text>`).join("");
+  const lines = opt.series.map((s) => {
+    const pts = s.values.map((v, i) => `${sx(i)},${sy(v)}`).join(" "), last = s.values.length - 1;
+    const marks = s.reference ? "" : s.values.map((v, i) => `<circle cx="${sx(i)}" cy="${sy(v)}" r="4" fill="${s.color}" stroke="var(--panel)" stroke-width="2"/>`).join("");
+    return `<polyline points="${pts}" fill="none" stroke="${s.color}" stroke-width="2" ${s.reference ? 'stroke-dasharray="4 4"' : ""} stroke-linejoin="round"/>${marks}
+      <text x="${sx(last) + 10}" y="${sy(s.values[last]) + 4}" font-size="11" style="fill:var(--muted)">${esc(s.name)}</text>`;
+  }).join("");
+  const half = (W - L - R) / (xs.length - 1) / 2;
+  const hits = xs.map((x, i) => `<rect data-i="${i}" x="${sx(i) - half}" y="${T}" width="${half * 2}" height="${H - T - B}" fill="transparent"/>`).join("");
+  const legend = opt.series.filter((s) => !s.reference).map((s) => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join("");
+  el.innerHTML = `<h3>${esc(opt.title)}</h3><div class="desc">${esc(opt.desc)}</div><div class="chart-legend">${legend}</div>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opt.title)}"><g class="grid">${grid}</g>
+      <g class="axis">${yLabels}${xLabels}<text x="${(L + W - R) / 2}" y="${H - 2}" text-anchor="middle">${esc(opt.xLabel)}</text></g>
+      <line class="cross" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--muted)" stroke-width="1" style="display:none"/>${lines}<g class="hits">${hits}</g></svg><div class="tip"></div>`;
+  const svg = el.querySelector("svg"), tip = el.querySelector(".tip"), cross = el.querySelector(".cross");
+  el.querySelectorAll(".hits rect").forEach((r) => {
+    r.addEventListener("mouseenter", () => {
+      const i = Number(r.dataset.i);
+      cross.setAttribute("x1", sx(i)); cross.setAttribute("x2", sx(i)); cross.style.display = "";
+      tip.innerHTML = `<div style="color:var(--muted)">${esc(opt.xLabel)}: <b>${xs[i]}</b></div>` + opt.series.map((s) =>
+        `<div><i style="display:inline-block;width:10px;height:3px;background:${s.color};margin-right:6px;vertical-align:middle"></i>${esc(s.name)}: <b>${opt.fmt(s.values[i])}</b></div>`).join("");
+      // svg elements have no offsetLeft, so position relative to the chart box instead
+      const box = svg.getBoundingClientRect(), outer = el.getBoundingClientRect(), scale = box.width / W;
+      tip.style.display = "block";
+      const x0 = box.left - outer.left, y0 = box.top - outer.top;
+      let left = x0 + sx(i) * scale + 12;
+      if (left + tip.offsetWidth > x0 + box.width) left = x0 + sx(i) * scale - tip.offsetWidth - 12;
+      tip.style.left = left + "px";
+      tip.style.top = y0 + T * scale + "px";
+    });
+    r.addEventListener("mouseleave", () => { tip.style.display = "none"; cross.style.display = "none"; });
+  });
+}
+
+function renderEvaluation(d) {
+  $("eval-source").textContent = d.available ? d.source : "no results";
+  if (!d.available) {
+    $("eval-tiles").innerHTML = `<div class="tile"><div class="label">No scenario results found</div><div class="note">Run <code>scripts\\run-scenarios.ps1</code> (or point <code>--results</code> at a results folder).</div></div>`;
+    $("scenarios").innerHTML = "";
+    return;
+  }
+  const passed = d.checks.filter((c) => c.result === "PASS").length;
+  const fsync = d.load.filter((r) => r.mode === "fsync"), nofsync = d.load.filter((r) => r.mode === "no-fsync");
+  const peak = fsync.length ? Math.max(...fsync.map((r) => num(r.throughput_rps))) : null;
+  const at1000 = fsync.find((r) => r.target_rps === "1000");
+  const restart = (d.notes["s5-allocator-restart"] || []).join(" ").match(/assigned in (\d+) ms/i);
+  $("eval-tiles").innerHTML = [
+    ["Correctness checks passed", `${passed} / ${d.checks.length}`, `across ${Object.keys(d.notes).length} scenarios`, passed === d.checks.length ? "var(--run)" : "#FF8FA6"],
+    ["Peak throughput, fsync on", peak == null ? "–" : `${Math.round(peak).toLocaleString()}/s`, "allocator decisions per second", ""],
+    ["p99 latency at 1,000 req/s", at1000 ? fmtMs(num(at1000.p99_ms)) : "–", "with fsync before every reply", ""],
+    ["Recovery after allocator crash", restart ? `${restart[1]} ms` : "–", "relaunch → held request assigned", ""],
+  ].map(([label, value, note, color]) => `<div class="tile"><div class="label">${label}</div><div class="value" style="color:${color || "var(--text)"}">${value}</div><div class="note">${note}</div></div>`).join("");
+
+  if (fsync.length && nofsync.length) {
+    const x = fsync.map((r) => r.target_rps);
+    lineChart($("chart-p99"), {
+      title: "p99 latency vs offered load", desc: "Log scale. Once the allocator saturates, requests queue and the tail latency climbs.",
+      x, xLabel: "offered load (req/s)", log: true, tick: (t) => t >= 1000 ? t / 1000 + "s" : t + "ms", fmt: fmtMs,
+      series: [{ name: "fsync", color: "var(--series-1)", values: fsync.map((r) => num(r.p99_ms)) },
+               { name: "no fsync", color: "var(--series-2)", values: nofsync.map((r) => num(r.p99_ms)) }],
+    });
+    lineChart($("chart-tput"), {
+      title: "Achieved vs offered throughput", desc: "Dashed line is the offered load; a line below it means the allocator fell behind.",
+      x, xLabel: "offered load (req/s)", step: 500, tick: (t) => t.toLocaleString(), fmt: (v) => Math.round(v).toLocaleString() + "/s",
+      series: [{ name: "offered", color: "#6E6390", reference: true, values: x.map(Number) },
+               { name: "fsync", color: "var(--series-1)", values: fsync.map((r) => num(r.throughput_rps)) },
+               { name: "no fsync", color: "var(--series-2)", values: nofsync.map((r) => num(r.throughput_rps)) }],
+    });
+    $("load-table").innerHTML = `<h3 class="label">All load-test runs</h3><div class="tablewrap"><table><thead><tr><th>Mode</th><th class="num-r">Offered</th><th class="num-r">Achieved</th>
+      <th class="num-r">p50</th><th class="num-r">p95</th><th class="num-r">p99</th><th class="num-r">Max</th><th class="num-r">CPU avg</th><th class="num-r">Heap max</th><th class="num-r">Assigned / wait</th></tr></thead><tbody>
+      ${d.load.map((r) => `<tr><td><span class="dot" style="margin-right:8px;background:${r.mode === "fsync" ? "var(--series-1)" : "var(--series-2)"}"></span>${esc(r.mode)}</td>
+        <td class="num-r">${esc(r.target_rps)}</td><td class="num-r">${num(r.throughput_rps).toFixed(0)}</td><td class="num-r">${fmtMs(num(r.p50_ms))}</td>
+        <td class="num-r">${fmtMs(num(r.p95_ms))}</td><td class="num-r">${fmtMs(num(r.p99_ms))}</td><td class="num-r">${fmtMs(num(r.max_ms))}</td>
+        <td class="num-r">${esc(r.cpu_pct_avg)}%</td><td class="num-r">${esc(r.heap_mb_max)} MB</td><td class="num-r">${esc(r.assigned)} / ${esc(r.wait)}</td></tr>`).join("")}</tbody></table></div>`;
+  }
+
+  const byScenario = new Map();
+  for (const c of d.checks) { if (!byScenario.has(c.scenario)) byScenario.set(c.scenario, []); byScenario.get(c.scenario).push(c); }
+  $("scenarios").innerHTML = [...byScenario].map(([name, checks]) => {
+    const [n, title, what] = SCENARIOS[name] || ["?", name, ""];
+    const ok = checks.filter((c) => c.result === "PASS").length, notes = d.notes[name] || [];
+    return `<details class="scen"><summary><span class="num">S${n}</span><span>${esc(title)}<span class="what">${esc(what)}</span></span>
+        ${tag(`${ok}/${checks.length} PASS`, ok === checks.length ? "t-ok" : "t-bad")}</summary>
+      <div class="body"><ul>${checks.map((c) => `<li>${tag(c.result, c.result === "PASS" ? "t-ok" : "t-bad")}<span class="inv">inv ${esc(c.invariant)}</span>${esc(c.check)}${c.detail ? ` <span class="det">· ${esc(c.detail)}</span>` : ""}</li>`).join("")}</ul>
+        ${notes.length ? `<pre class="notes">${esc(notes.join("\n"))}</pre>` : ""}</div></details>`;
+  }).join("");
+}
+async function loadEvaluation() {
+  try {
+    const res = await fetch("api/results", { cache: "no-store" });
+    renderEvaluation(await res.json());
+  } catch (err) {
+    $("eval-tiles").innerHTML = `<div class="tile"><div class="label">Could not load results</div><div class="note">${esc(err.message)}</div></div>`;
+  }
+}
+
+function showView() {
+  const view = location.hash === "#evaluation" ? "evaluation" : "live";
+  for (const v of ["live", "evaluation"]) {
+    $("view-" + v).classList.toggle("active", v === view);
+    $("tab-" + v).classList.toggle("active", v === view);
+  }
+  if (view === "evaluation") loadEvaluation();
+}
+window.addEventListener("hashchange", showView);
+renderViewButtons();
+showView();
+poll();
+</script>
+</body>
+</html>

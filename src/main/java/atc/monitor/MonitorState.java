@@ -35,6 +35,16 @@ public final class MonitorState {
     private final Deque<LoggedEvent> events = new ArrayDeque<>();
     private long messages;
     private long malformed;
+    private final int maxEvents;
+
+    public MonitorState() {
+        this(MAX_EVENTS);
+    }
+
+    /** @param maxEvents how many recent events to keep (the web dashboard keeps more than the console) */
+    public MonitorState(int maxEvents) {
+        this.maxEvents = Math.max(1, maxEvents);
+    }
 
     public void onMessage(Message m, long now) {
         messages++;
@@ -64,7 +74,7 @@ public final class MonitorState {
             return;
         }
         events.addLast(new LoggedEvent(now, e.service(), e.kind(), summarize(e)));
-        while (events.size() > MAX_EVENTS) {
+        while (events.size() > maxEvents) {
             events.removeFirst();
         }
     }

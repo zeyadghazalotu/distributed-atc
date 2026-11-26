@@ -81,9 +81,9 @@ class JsonCodecTest {
         AtcConfig config = AtcConfig.load(Path.of("config/airports.json"));
         assertEquals(2, config.airports().size());
         for (AtcConfig.AirportConfig a : config.airports()) {
-            assertEquals(10, a.runways().size(), a.id());
+            assertEquals("YYZ".equals(a.id()) ? 5 : 3, a.runways().size(), a.id()); // Pearson-style and Ottawa-style layouts
             assertEquals(4, a.taxiways().size(), a.id());
-            assertEquals(5, a.aircraftCount(), a.id());
+            assertEquals(7, a.aircraftCount(), a.id());
         }
         assertEquals(5555, config.allocator().routerPort());
         assertEquals(60_000, config.timing().slotMs());

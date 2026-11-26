@@ -23,6 +23,7 @@ start allocator atc.allocator.RunwayAllocator --time-scale "$SCALE"
 sleep 2
 start control-YYZ atc.control.ControlService --airport YYZ
 start control-YOW atc.control.ControlService --airport YOW
+start web atc.monitor.WebDashboard
 sleep 2
 if [ -n "$EMERGENCY" ]; then
   start sim-YYZ atc.aircraft.AircraftSimulator --airport YYZ --time-scale "$SCALE" --emergency "$EMERGENCY"
@@ -30,6 +31,7 @@ else
   start sim-YYZ atc.aircraft.AircraftSimulator --airport YYZ --time-scale "$SCALE"
 fi
 start sim-YOW atc.aircraft.AircraftSimulator --airport YOW --time-scale "$SCALE" --seed 2
+echo "web dashboard: http://localhost:8080"
 echo "allocator pid: ${PIDS[0]}  (crash test from another terminal: kill -9 ${PIDS[0]})"
 sleep 1
 java -cp target/atc.jar atc.monitor.Monitor --events-log data/logs/monitor-events.log

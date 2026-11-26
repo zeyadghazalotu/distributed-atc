@@ -1,11 +1,11 @@
 # Starts the whole system for a live demo (Windows PowerShell 5.1+).
-#   scripts\run-all.ps1 [-TimeScale 10] [-Emergency YYZ-AC3] [-Count 5] [-KeepLog]
+#   scripts\run-all.ps1 [-TimeScale 10] [-Emergency YYZ-AC3] [-Count 7] [-KeepLog]
 # Each service gets its own window; the Monitor runs in a window too. Logs go to data\logs\.
 # Stop everything with scripts\stop-all.ps1 (only stops processes this script started).
 param(
     [int]$TimeScale = 10,
     [string]$Emergency = "",
-    [int]$Count = 5,
+    [int]$Count = 7,
     [switch]$KeepLog
 )
 $ErrorActionPreference = 'Stop'
@@ -36,10 +36,12 @@ Start-Sleep -Seconds 2
 Start-AtcService 'control-YYZ' 'atc.control.ControlService --airport YYZ'
 Start-AtcService 'control-YOW' 'atc.control.ControlService --airport YOW'
 Start-AtcService 'monitor' 'atc.monitor.Monitor --events-log data\logs\monitor-events.log'
+Start-AtcService 'web' 'atc.monitor.WebDashboard'
 Start-Sleep -Seconds 2
 $em = ''
 if ($Emergency -ne '') { $em = "--emergency $Emergency" }
 Start-AtcService 'sim-YYZ' "atc.aircraft.AircraftSimulator --airport YYZ --count $Count --time-scale $TimeScale $em"
 Start-AtcService 'sim-YOW' "atc.aircraft.AircraftSimulator --airport YOW --count $Count --time-scale $TimeScale --seed 2"
 Write-Host ''
+Write-Host 'Web dashboard: http://localhost:8080'
 Write-Host 'All services started. Crash test: scripts\allocator-crash.ps1   Stop: scripts\stop-all.ps1'
