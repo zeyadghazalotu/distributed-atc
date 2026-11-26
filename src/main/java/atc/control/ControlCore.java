@@ -596,7 +596,7 @@ public final class ControlCore {
         List<ControlState.RequestView> views = requests.values().stream()
                 .map(r -> new ControlState.RequestView(r.requestId, r.aircraftId, r.operation, r.emergency,
                         r.status.name(), r.runwayId, r.taxiwayId, r.slotStart, r.slotEnd,
-                        r.lastInstruction == null ? null : r.lastInstruction.status().name()))
+                        r.lastInstruction == null ? null : r.lastInstruction.status().name(), r.sizeClass))
                 .toList();
         return new ControlState(service, airportId, allocator.reachable(), view.all(), views,
                 taxiways.occupancy(), taxiways.queue(), view.staleDropped(), clock.nowMillis());

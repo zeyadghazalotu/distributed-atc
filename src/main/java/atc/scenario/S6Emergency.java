@@ -1,6 +1,7 @@
 package atc.scenario;
 
 import atc.allocator.CheckLog;
+import atc.allocator.Eligibility;
 import atc.allocator.ReservationRecord;
 import atc.common.Ack;
 import atc.common.Instruction;
@@ -11,13 +12,15 @@ import atc.common.RunwayRequest;
 import atc.common.SizeClass;
 
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Scenario 6: an emergency bumps a not-yet-acked reservation. YYZ has three HEAVY-capable
- * runways: two hold acked (CONFIRMED) bookings, one holds an unacked (PENDING_ACK) booking. An
- * emergency HEAVY must get the earliest slot by bumping the unacked one; the bumped aircraft is
- * told to hold and rebooked; the confirmed bookings are untouched.
+ * Scenario 6: an emergency bumps a not-yet-acked reservation. Every HEAVY-capable runway at YYZ
+ * is booked: all but one with acked (CONFIRMED) bookings, the last with an unacked (PENDING_ACK)
+ * booking. An emergency HEAVY must get the earliest slot by bumping the unacked one; the bumped
+ * aircraft is told to hold and rebooked; the confirmed bookings are untouched.
+ * The number of HEAVY-capable runways comes from the config, so this works for any layout.
  */
 final class S6Emergency implements Scenario {
     @Override
@@ -36,15 +39,22 @@ final class S6Emergency implements Scenario {
         ctx.startControl("YYZ", 5000, true);
         long slotMs = ctx.config.timing().slotMs();
         long bufferMs = ctx.config.timing().bufferMs();
+        long heavyRunways = ctx.config.airport("YYZ").orElseThrow().runways().stream()
+                .filter(r -> Eligibility.isEligible(r, SizeClass.HEAVY)).count();
 
-        try (AircraftClient c1 = new AircraftClient(ctx.zmq, ctx.controlRouter("YYZ"), "S6-C1");
-             AircraftClient c2 = new AircraftClient(ctx.zmq, ctx.controlRouter("YYZ"), "S6-C2");
-             AircraftClient p1 = new AircraftClient(ctx.zmq, ctx.controlRouter("YYZ"), "S6-P1");
+        // one confirmed booking per HEAVY runway except the last, which gets the pending one
+        List<AircraftClient> confirmed = new ArrayList<>();
+        for (int i = 1; i < heavyRunways; i++) {
+            confirmed.add(new AircraftClient(ctx.zmq, ctx.controlRouter("YYZ"), "S6-C" + i));
+        }
+        try (AircraftClient p1 = new AircraftClient(ctx.zmq, ctx.controlRouter("YYZ"), "S6-P1");
              AircraftClient e1 = new AircraftClient(ctx.zmq, ctx.controlRouter("YYZ"), "S6-E1");
              PrintWriter w = ctx.csv("instructions.csv", "aircraft,status,runway,slot_start,reason")) {
             Thread.sleep(300);
-            Instruction c1i = assign(c1, true);
-            Instruction c2i = assign(c2, true);
+            List<Instruction> confirmedSlots = new ArrayList<>();
+            for (AircraftClient c : confirmed) {
+                confirmedSlots.add(assign(c, true));
+            }
             Instruction p1i = assign(p1, false); // stays PENDING_ACK
             Thread.sleep(300);
 
@@ -60,11 +70,15 @@ final class S6Emergency implements Scenario {
             if (p1New != null) {
                 p1.send(new Ack(p1New.requestId(), "S6-P1"));
             }
-            c1.drain(200);
-            c2.drain(200);
+            for (AircraftClient c : confirmed) {
+                c.drain(200);
+            }
             Thread.sleep(500);
 
-            for (AircraftClient c : List.of(c1, c2, p1, e1)) {
+            List<AircraftClient> everyone = new ArrayList<>(confirmed);
+            everyone.add(p1);
+            everyone.add(e1);
+            for (AircraftClient c : everyone) {
                 for (Instruction i : c.instructions()) {
                     w.printf("%s,%s,%s,%s,\"%s\"%n", c.aircraftId, i.status(), i.runwayId() == null ? "" : i.runwayId(),
                             i.slotStart() == null ? "" : i.slotStart(), i.reason() == null ? "" : i.reason());
@@ -75,8 +89,14 @@ final class S6Emergency implements Scenario {
             ctx.check("-", "emergency is ASSIGNED", e1Ok, String.valueOf(e1i));
             ctx.check("-", "emergency takes the bumped aircraft's runway", e1Ok && p1i != null && e1i.runwayId().equals(p1i.runwayId()),
                     e1Ok ? e1i.runwayId() + " (P1 had " + (p1i == null ? "?" : p1i.runwayId()) + ")" : "");
-            // Without bumping, the earliest HEAVY slot would be after C1/C2/P1: slot + 2 buffers later.
-            long withoutBump = Math.min(c1i.slotStart(), c2i.slotStart()) + slotMs + 2 * bufferMs;
+            // Without bumping, the earliest HEAVY slot would be after the existing bookings: slot + 2 buffers later.
+            long earliestBooked = p1i == null ? Long.MAX_VALUE : p1i.slotStart();
+            for (Instruction ci : confirmedSlots) {
+                if (ci != null) {
+                    earliestBooked = Math.min(earliestBooked, ci.slotStart());
+                }
+            }
+            long withoutBump = earliestBooked + slotMs + 2 * bufferMs;
             ctx.check("-", "emergency slot is earlier than any non-bumping option", e1Ok && e1i.slotStart() < withoutBump,
                     e1Ok ? "starts " + (e1i.slotStart() - p1i.slotStart()) + " ms after P1's old slot; non-bumping option "
                             + (withoutBump - p1i.slotStart()) + " ms after" : "");
@@ -93,12 +113,21 @@ final class S6Emergency implements Scenario {
             ctx.check("-", "allocator log: P1's booking BUMPED, rebooked as #2 and confirmed",
                     last(history, "s6-S6-P1") == ReservationState.BUMPED && last(history, "s6-S6-P1#2") == ReservationState.CONFIRMED,
                     last(history, "s6-S6-P1") + " / " + last(history, "s6-S6-P1#2"));
-            boolean confirmedUntouched = history.stream().filter(r -> r.requestId().equals("s6-S6-C1") || r.requestId().equals("s6-S6-C2"))
-                    .noneMatch(r -> r.state() == ReservationState.BUMPED);
-            ctx.check("-", "confirmed (acked) bookings are never bumped", confirmedUntouched
-                    && last(history, "s6-S6-C1") == ReservationState.CONFIRMED && last(history, "s6-S6-C2") == ReservationState.CONFIRMED, "");
+            boolean confirmedUntouched = true;
+            for (AircraftClient c : confirmed) {
+                String id = "s6-" + c.aircraftId;
+                confirmedUntouched &= history.stream().filter(r -> r.requestId().equals(id))
+                        .noneMatch(r -> r.state() == ReservationState.BUMPED)
+                        && last(history, id) == ReservationState.CONFIRMED;
+            }
+            ctx.check("-", "confirmed (acked) bookings are never bumped", confirmedUntouched,
+                    confirmed.size() + " confirmed booking(s), " + heavyRunways + " HEAVY-capable runway(s)");
             ctx.logInvariantChecks(ctx.allocatorLog());
             ctx.note("emergency decision latency (aircraft -> control -> allocator -> aircraft): %.2f ms", emergencyMs);
+        } finally {
+            for (AircraftClient c : confirmed) {
+                c.close();
+            }
         }
     }
 

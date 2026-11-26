@@ -8,7 +8,8 @@ distributed-systems problems: a single serializing authority, idempotent retries
 write-ahead logging, crash recovery with reconciliation, and failure detection with heartbeats.
 
 > Educational simulation with synthetic data. These are not real aviation procedures, and
-> the runway data is invented.
+> the runway layouts only approximate the real airports: YYZ uses Pearson's five runways and YOW
+> Ottawa's three, with rounded lengths (YOW 04/22 is lengthened to 1600 m so small aircraft can use it).
 
 ---
 
@@ -58,6 +59,7 @@ write-ahead logging, crash recovery with reconciliation, and failure detection w
 | ControlService (×2) | `atc.control.ControlService` | One per airport. Validates aircraft requests, forwards them to the allocator asynchronously, assigns taxiways, relays instructions, tracks acks, and filters out-of-order positions. Allocator silent → `HELD` (never "rejected"); reconciles after an allocator restart. |
 | AircraftSimulator (×2) | `atc.aircraft.AircraftSimulator` | Runs N aircraft for one airport: phase state machine, position updates with sequence numbers, requests retried with the same `requestId` (lazy pirate), acks, completion. |
 | Monitor | `atc.monitor.Monitor` | Refreshing console dashboard of aircraft, runways, taxiways, instructions and service health. |
+| WebDashboard | `atc.monitor.WebDashboard` | The same listen-only data in a browser at http://localhost:8080: an interactive 3D airfield (runways, terminal, tower and every aircraft placed from its live position, phase and assigned runway; drag to orbit, Ctrl + scroll to zoom), flight strips, service health, airspace profiles, per-runway slot timelines, aircraft tables, taxiways and the event log. An Evaluation tab shows the scenario checks and load-test results. |
 | ScenarioRunner | `atc.scenario.ScenarioRunner` | Launches the real processes, runs the 7 evaluation scenarios and writes PASS/FAIL plus CSV metrics. |
 
 Default ports (YOW = YYZ + 10; the scenarios add 1000 to every port):
@@ -103,7 +105,7 @@ default encoding is Cp1252.
 
 ### Windows (PowerShell)
 ```
-scripts\run-all.ps1                       # allocator, 2 control services, 2 simulators (5 aircraft each), Monitor
+scripts\run-all.ps1                       # allocator, 2 control services, 2 simulators (7 aircraft each), Monitor + web dashboard
 scripts\run-all.ps1 -Emergency YYZ-AC3    # same, with YYZ-AC3 declaring an emergency on landing
 scripts\allocator-crash.ps1               # hard-kill the allocator, wait 8 s, restart it from its log
 scripts\stop-all.ps1                      # stop everything run-all started (and nothing else)
@@ -122,6 +124,7 @@ java -cp target/atc.jar atc.allocator.RunwayAllocator --time-scale 10
 Ctrl+C stops everything.
 
 ### What to watch on the Monitor
+Open **http://localhost:8080** for the web dashboard (started by `run-all`), or watch the console Monitor; both show the same data.
 - **Normal operation:** arrivals go APPROACH → LANDING → TAXI_IN → PARKED; departures go PARKED →
   TAXI_OUT → HOLDING_SHORT → TAKEOFF_ROLL → DEPARTED. Runways show `IN USE` / `booked … in Ns` /
   `free`; taxiways show which aircraft holds them.
@@ -150,9 +153,12 @@ java -cp target/atc.jar atc.control.ControlService --airport YOW
 # 3. Monitor. --no-clear for terminals without ANSI; --once prints one frame and exits.
 java -cp target/atc.jar atc.monitor.Monitor [--no-clear] [--once] [--events-log file] [--host host]
 
+# 3b. Web dashboard (optional), then open http://localhost:8080. --bind 0.0.0.0 to reach it from other machines.
+java -cp target/atc.jar atc.monitor.WebDashboard [--port 8080] [--bind 127.0.0.1] [--host host] [--results dir]
+
 # 4. Aircraft. --time-scale must match the allocator's.
 java -cp target/atc.jar atc.aircraft.AircraftSimulator --airport YYZ --time-scale 10
-     [--count 5] [--cycles N] [--seed 1] [--sizes SMALL,MEDIUM,HEAVY] [--emergency YYZ-AC3]
+     [--count 7] [--cycles N] [--seed 1] [--sizes SMALL,MEDIUM,HEAVY] [--emergency YYZ-AC3]
      [--retry-ms n] [--control-host host]
 ```
 
@@ -206,6 +212,8 @@ The exit code is 0 only if every check passed.
 - `results/sample/scenarios/` is committed: a compact copy of a full run of all seven scenarios,
   so the results can be inspected without running anything. Everything else under `results/` is
   regenerated and git-ignored.
+- The web dashboard's **Evaluation** tab (http://localhost:8080/#evaluation) shows the latest run in
+  `results/` (or the committed sample if there is none) as tables and charts.
 
 Reference results (this machine): all 71 checks PASS. The allocator sustains ~1,200
 decisions/s with fsync (~1,600 without). At 1000 req/s, p99 latency is about 12 ms with fsync
@@ -230,8 +238,8 @@ and 6 ms without. The full analysis is in the final report.
   },
   "airports": [
     { "id": "YYZ", "controlRouterPort": 5560, "positionSubPort": 5561, "eventPubPort": 5562,
-      "aircraftCount": 5, "taxiways": ["YYZ-A", "..."],
-      "runways": [ { "id": "YYZ-R01", "lengthM": 3400 }, { "id": "YYZ-R09", "lengthM": 1600, "maxSizeClass": "SMALL" } ] }
+      "aircraftCount": 7, "taxiways": ["YYZ-A", "..."],
+      "runways": [ { "id": "YYZ-05/23", "lengthM": 3389 }, { "id": "YYZ-06L/24R", "lengthM": 2956 }, "..." ] }
   ]
 }
 ```
@@ -295,7 +303,8 @@ src/main/java/atc/
   control/                   ControlService (process), ControlCore (logic), AllocatorLink (retries, health),
                              TaxiwayManager, AircraftView (seq filter)
   aircraft/                  AircraftSimulator (process), AircraftAgent (state machine), SimParams
-  monitor/                   Monitor (process), MonitorState, DashboardRenderer
+  monitor/                   Monitor (process), MonitorState, DashboardRenderer, WebDashboard (browser view;
+                             page in src/main/resources/web/index.html)
   scenario/                  ScenarioRunner, scenarios S1–S7, clients, metrics sampler
 src/test/java/atc/...        JUnit 5: logic tests with controlled clocks + TCP tests with real sockets
 scripts/                     run-all, allocator-crash, stop-all, run-scenarios (.ps1 / .sh)

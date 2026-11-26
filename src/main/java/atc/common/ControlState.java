@@ -14,9 +14,20 @@ public record ControlState(String service, String airportId, boolean allocatorRe
                            Map<String, String> taxiwayOccupancy, List<String> taxiwayQueue,
                            long stalePositionsDropped, long ts) {
 
-    /** One runway request as the control service sees it. */
+    /**
+     * One runway request as the control service sees it.
+     *
+     * @param sizeClass the aircraft's size class (null in snapshots from older control services)
+     */
     public record RequestView(String requestId, String aircraftId, Operation operation, boolean emergency,
                               String status, String runwayId, String taxiwayId, Long slotStart, Long slotEnd,
-                              String lastInstruction) {
+                              String lastInstruction, SizeClass sizeClass) {
+
+        public RequestView(String requestId, String aircraftId, Operation operation, boolean emergency,
+                           String status, String runwayId, String taxiwayId, Long slotStart, Long slotEnd,
+                           String lastInstruction) {
+            this(requestId, aircraftId, operation, emergency, status, runwayId, taxiwayId, slotStart, slotEnd,
+                    lastInstruction, null);
+        }
     }
 }
